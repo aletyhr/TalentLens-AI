@@ -1,0 +1,16 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/uploads/
+*.pyc
+.env
+
+# React
+frontend/node_modules/
+frontend/build/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
