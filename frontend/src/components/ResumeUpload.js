@@ -40,10 +40,12 @@ function ResumeUpload() {
   const [experience, setExperience] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
 
-  // NEW STATES
   const [matchedSkills, setMatchedSkills] = useState([]);
   const [missingSkills, setMissingSkills] = useState([]);
   const [interviewQuestions, setInterviewQuestions] = useState([]);
+
+  // NEW
+  const [resumeInsights, setResumeInsights] = useState(null);
 
   const onDrop = (acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -93,10 +95,12 @@ function ResumeUpload() {
       setExperience(response.data.experience || []);
       setSuggestions(response.data.suggestions || []);
 
-      // NEW DATA
       setMatchedSkills(response.data.matched_skills || []);
       setMissingSkills(response.data.missing_skills || []);
       setInterviewQuestions(response.data.interview_questions || []);
+
+      // NEW
+      setResumeInsights(response.data.resume_insights || null);
 
       try {
         await API.post("/save_resume", {
@@ -112,6 +116,7 @@ function ResumeUpload() {
           suggestions: response.data.suggestions || [],
           matched_skills: response.data.matched_skills || [],
           missing_skills: response.data.missing_skills || [],
+          resume_insights: response.data.resume_insights || {},
         });
       } catch (e) {
         console.log("History save failed", e);
@@ -291,6 +296,7 @@ function ResumeUpload() {
               matchedSkills={matchedSkills}
               missingSkills={missingSkills}
               interviewQuestions={interviewQuestions}
+              resumeInsights={resumeInsights}
             />
           </>
         )}

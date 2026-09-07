@@ -1,74 +1,41 @@
-import {
-  Card,
-  CardContent,
-  Typography,
-  Chip,
-  Grid,
-  Divider,
-} from "@mui/material";
+import { Paper, Typography, Chip, Stack } from "@mui/material";
 
 function SkillsCard({ skills }) {
-  const recommendedSkills = [
-    "Docker",
-    "AWS",
-    "Kubernetes",
-    "GitHub Actions",
-    "REST API",
-    "CI/CD",
-  ];
-
-  const missingSkills = recommendedSkills.filter(
-    (skill) =>
-      !skills.some(
-        (userSkill) => userSkill.toLowerCase() === skill.toLowerCase(),
-      ),
-  );
-
   return (
-    <Card
-      elevation={6}
+    <Paper
+      elevation={5}
       sx={{
+        p: 4,
         borderRadius: 4,
       }}
     >
-      <CardContent>
-        <Typography variant="h5" fontWeight="bold" gutterBottom>
-          🚀 Skills Analysis
-        </Typography>
+      <Typography variant="h5" fontWeight="bold" gutterBottom>
+        🛠 Extracted Resume Skills
+      </Typography>
 
-        <Divider sx={{ mb: 2 }} />
+      <Typography color="text.secondary" sx={{ mb: 3 }}>
+        AI extracted the following technical skills from your resume.
+      </Typography>
 
-        <Typography variant="h6" color="success.main">
-          ✅ Detected Skills
-        </Typography>
-
-        <Grid container spacing={1} sx={{ mt: 1, mb: 3 }}>
-          {skills.length > 0 ? (
-            skills.map((skill, index) => (
-              <Grid item key={index}>
-                <Chip label={skill} color="success" variant="filled" />
-              </Grid>
-            ))
-          ) : (
-            <Typography>No skills detected.</Typography>
-          )}
-        </Grid>
-
-        <Divider sx={{ mb: 2 }} />
-
-        <Typography variant="h6" color="error.main">
-          ⚠ Recommended Skills
-        </Typography>
-
-        <Grid container spacing={1} sx={{ mt: 1 }}>
-          {missingSkills.map((skill, index) => (
-            <Grid item key={index}>
-              <Chip label={skill} color="error" variant="outlined" />
-            </Grid>
-          ))}
-        </Grid>
-      </CardContent>
-    </Card>
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+        {skills?.length > 0 ? (
+          skills.map((skill, index) => (
+            <Chip
+              key={index}
+              label={skill}
+              color="primary"
+              variant="filled"
+              sx={{
+                fontWeight: "bold",
+                mb: 1,
+              }}
+            />
+          ))
+        ) : (
+          <Typography>No skills found.</Typography>
+        )}
+      </Stack>
+    </Paper>
   );
 }
 

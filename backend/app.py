@@ -35,6 +35,7 @@ from ai.resume_grader import calculate_resume_grade
 from ai.job_role_predictor import predict_job_role
 from ai.suggestion_engine import generate_suggestions
 from ai.interview_questions import get_interview_questions
+from ai.resume_insights import generate_resume_insights
 
 # -----------------------------
 # Flask App
@@ -49,7 +50,7 @@ app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
 jwt = JWTManager(app)
 
-# JWT Error Handlers
+
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
     return jsonify({"message": error}), 401
@@ -106,11 +107,7 @@ def upload_resume():
     if file.filename == "":
         return jsonify({"message": "No file selected"}), 400
 
-    filepath = os.path.join(
-        app.config["UPLOAD_FOLDER"],
-        file.filename
-    )
-
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
     file.save(filepath)
 
     resume_text = extract_text(filepath)
@@ -155,13 +152,25 @@ def upload_resume():
     overall_score = float(overall_score)
 
     predicted_role = predict_job_role(skills)
+
     interview_questions = get_interview_questions(predicted_role)
+
     print("Predicted Role:", repr(predicted_role))
     print("Interview Questions:", interview_questions)
 
     suggestions = generate_suggestions(
         ats_score,
         missing_skills
+    )
+
+    # -----------------------------
+    # Resume Insights
+    # -----------------------------
+    resume_insights = generate_resume_insights(
+        skills,
+        ats_score,
+        education,
+        experience
     )
 
     return jsonify({
@@ -187,13 +196,16 @@ def upload_resume():
         "overall_score": overall_score,
 
         "predicted_role": predicted_role,
+
         "interview_questions": interview_questions,
 
         "matched_skills": matched_skills,
 
         "missing_skills": missing_skills,
 
-        "suggestions": suggestions
+        "suggestions": suggestions,
+
+        "resume_insights": resume_insights
 
     })
 

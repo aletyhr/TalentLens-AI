@@ -3,12 +3,13 @@ Flask-Cors==5.0.0
 Flask-Bcrypt==1.0.1
 Flask-JWT-Extended==4.6.0
 python-dotenv==1.0.1
+
 pymongo==4.8.0
 
 numpy==1.26.4
 scipy==1.13.1
-scikit-learn==1.5.1
 pandas==2.2.2
+scikit-learn==1.5.1
 
 torch==2.4.1
 transformers==4.44.2
@@ -16,3 +17,7 @@ sentence-transformers==3.0.1
 
 spacy==3.7.5
 PyMuPDF==1.24.9
+pdfplumber==0.11.4
+pdfminer.six==20231228
+cryptography==43.0.1
+bcrypt==4.2.0
