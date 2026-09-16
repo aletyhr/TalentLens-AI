@@ -15,20 +15,47 @@ def save_resume():
 
     email = get_jwt_identity()
 
-    data = request.json
+    data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "message": "No resume data received"
+        }), 400
 
     document = {
         "email": email,
+
         "filename": data.get("filename"),
+
+        # Scores
         "ats_score": data.get("ats_score"),
         "semantic_score": data.get("semantic_score"),
         "resume_grade": data.get("resume_grade"),
         "overall_score": data.get("overall_score"),
+
+        # AI Prediction
         "predicted_role": data.get("predicted_role"),
-        "skills": data.get("skills"),
-        "education": data.get("education"),
-        "experience": data.get("experience"),
-        "suggestions": data.get("suggestions"),
+
+        # Resume Information
+        "skills": data.get("skills", []),
+        "education": data.get("education", []),
+        "experience": data.get("experience", []),
+
+        # ATS Analysis
+        "matched_skills": data.get("matched_skills", []),
+        "missing_skills": data.get("missing_skills", []),
+
+        # AI Suggestions
+        "suggestions": data.get("suggestions", []),
+
+        # Resume Insights
+        "resume_insights": data.get("resume_insights", {}),
+
+        # Interview Questions
+        "interview_questions": data.get(
+            "interview_questions",
+            []
+        )
     }
 
     resume_history.insert_one(document)
@@ -48,11 +75,11 @@ def history():
 
     email = get_jwt_identity()
 
-    history = list(
+    history_data = list(
         resume_history.find(
             {"email": email},
             {"_id": 0}
         )
     )
 
-    return jsonify(history), 200
+    return jsonify(history_data), 200

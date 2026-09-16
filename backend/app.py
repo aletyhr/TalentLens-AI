@@ -4,22 +4,28 @@ from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
 import os
 
+
 # -----------------------------
 # Load Environment Variables
 # -----------------------------
 load_dotenv()
 
+
 # -----------------------------
 # Authentication
 # -----------------------------
 from models.user import bcrypt
+
 from routes.auth import auth
 from routes.resume import resume
+from routes.mock_interview import mock_interview
+
 
 # -----------------------------
 # Utilities
 # -----------------------------
 from utils.pdf_reader import extract_text
+
 
 # -----------------------------
 # AI Modules
@@ -37,11 +43,14 @@ from ai.suggestion_engine import generate_suggestions
 from ai.interview_questions import get_interview_questions
 from ai.resume_insights import generate_resume_insights
 
+
 # -----------------------------
 # Flask App
 # -----------------------------
 app = Flask(__name__)
+
 CORS(app)
+
 
 # -----------------------------
 # JWT Configuration
@@ -53,34 +62,50 @@ jwt = JWTManager(app)
 
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
-    return jsonify({"message": error}), 401
+    return jsonify({
+        "message": error
+    }), 401
 
 
 @jwt.unauthorized_loader
 def unauthorized_callback(error):
-    return jsonify({"message": error}), 401
+    return jsonify({
+        "message": error
+    }), 401
 
 
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_payload):
-    return jsonify({"message": "Token has expired"}), 401
+    return jsonify({
+        "message": "Token has expired"
+    }), 401
 
 
+# -----------------------------
+# Initialize Bcrypt
+# -----------------------------
 bcrypt.init_app(app)
+
 
 # -----------------------------
 # Register Routes
 # -----------------------------
 app.register_blueprint(auth)
+
 app.register_blueprint(resume)
+
+app.register_blueprint(mock_interview)
+
 
 # -----------------------------
 # Upload Folder
 # -----------------------------
 UPLOAD_FOLDER = "uploads"
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 # =====================================================
 # HOME
@@ -88,9 +113,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
 def home():
+
     return jsonify({
         "message": "TalentLens AI Backend Running Successfully!"
     })
+
 
 # =====================================================
 # RESUME UPLOAD API
@@ -99,79 +126,178 @@ def home():
 @app.route("/upload", methods=["POST"])
 def upload_resume():
 
+    # -----------------------------
+    # Check Resume File
+    # -----------------------------
+
     if "resume" not in request.files:
-        return jsonify({"message": "No file uploaded"}), 400
+
+        return jsonify({
+            "message": "No file uploaded"
+        }), 400
+
 
     file = request.files["resume"]
 
-    if file.filename == "":
-        return jsonify({"message": "No file selected"}), 400
 
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+    if file.filename == "":
+
+        return jsonify({
+            "message": "No file selected"
+        }), 400
+
+
+    # -----------------------------
+    # Save Resume
+    # -----------------------------
+
+    filepath = os.path.join(
+        app.config["UPLOAD_FOLDER"],
+        file.filename
+    )
+
     file.save(filepath)
+
+
+    # -----------------------------
+    # Extract Resume Text
+    # -----------------------------
 
     resume_text = extract_text(filepath)
 
+
+    # -----------------------------
+    # Extract Resume Information
+    # -----------------------------
+
     skills = extract_skills(resume_text)
+
     education = extract_education(resume_text)
+
     experience = extract_experience(resume_text)
+
     contact = extract_contact_info(resume_text)
 
-    job_description = request.form.get("job_description", "")
+
+    # -----------------------------
+    # Get Job Description
+    # -----------------------------
+
+    job_description = request.form.get(
+        "job_description",
+        ""
+    )
+
+
+    # -----------------------------
+    # Default Job Description
+    # -----------------------------
 
     if job_description.strip() == "":
+
         job_description = """
+
         Looking for a Python Developer with
         Flask, React, Machine Learning,
         NLP, MongoDB,
         HTML, CSS,
         JavaScript,
         SQL and Git.
+
         """
 
-    ats_score, matched_skills, missing_skills = calculate_ats_score(
-        skills,
-        job_description
-    )
 
-    semantic_score = float(
-        calculate_semantic_score(
-            resume_text,
+    # -----------------------------
+    # ATS Score
+    # -----------------------------
+
+    ats_score, matched_skills, missing_skills = (
+        calculate_ats_score(
+            skills,
             job_description
         )
     )
 
-    resume_grade, overall_score = calculate_resume_grade(
-        ats_score,
-        semantic_score,
-        skills,
-        experience,
-        education
+
+    # -----------------------------
+    # Semantic Score
+    # -----------------------------
+
+    semantic_score = float(
+
+        calculate_semantic_score(
+            resume_text,
+            job_description
+        )
+
     )
+
+
+    # -----------------------------
+    # Resume Grade
+    # -----------------------------
+
+    resume_grade, overall_score = (
+        calculate_resume_grade(
+
+            ats_score,
+            semantic_score,
+            skills,
+            experience,
+            education
+
+        )
+    )
+
 
     overall_score = float(overall_score)
 
+
+    # -----------------------------
+    # Job Role Prediction
+    # -----------------------------
+
     predicted_role = predict_job_role(skills)
 
-    interview_questions = get_interview_questions(predicted_role)
 
-    print("Predicted Role:", repr(predicted_role))
-    print("Interview Questions:", interview_questions)
+    # -----------------------------
+    # Interview Questions
+    # -----------------------------
+
+    interview_questions = get_interview_questions(
+        predicted_role
+    )
+
+
+    # -----------------------------
+    # Suggestions
+    # -----------------------------
 
     suggestions = generate_suggestions(
+
         ats_score,
         missing_skills
+
     )
+
 
     # -----------------------------
     # Resume Insights
     # -----------------------------
+
     resume_insights = generate_resume_insights(
+
         skills,
         ats_score,
         education,
         experience
+
     )
+
+
+    # =====================================================
+    # Return Analysis Results
+    # =====================================================
 
     return jsonify({
 
@@ -215,4 +341,8 @@ def upload_resume():
 # =====================================================
 
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False)
+
+    app.run(
+        debug=True,
+        use_reloader=False
+    )

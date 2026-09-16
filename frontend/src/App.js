@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 
+// Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -11,24 +12,46 @@ import ResumeHistory from "./pages/ResumeHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+// ==========================================
+// PROTECTED ROUTE
+// ==========================================
+
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
 
-  return token ? children : <Navigate to="/login" replace />;
+  // If user is not logged in
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If user is logged in
+  return children;
 }
+
+// ==========================================
+// APP
+// ==========================================
 
 function App() {
   return (
     <BrowserRouter>
-      {/* Navbar on every page */}
+      {/* Navbar */}
       <Navbar />
 
       <Routes>
+        {/* ==============================
+            PUBLIC ROUTES
+        ============================== */}
+
         <Route path="/" element={<Home />} />
 
         <Route path="/login" element={<Login />} />
 
         <Route path="/register" element={<Register />} />
+
+        {/* ==============================
+            PROTECTED ROUTES
+        ============================== */}
 
         <Route
           path="/dashboard"
@@ -65,6 +88,10 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* ==============================
+            PAGE NOT FOUND
+        ============================== */}
 
         <Route path="*" element={<NotFound />} />
       </Routes>
