@@ -12,6 +12,9 @@ import ResumeHistory from "./pages/ResumeHistory";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+// AI Interview
+import AIInterview from "./components/AIInterview";
+
 // ==========================================
 // PROTECTED ROUTE
 // ==========================================
@@ -39,6 +42,7 @@ function App() {
       <Navbar />
 
       <Routes>
+
         {/* ==============================
             PUBLIC ROUTES
         ============================== */}
@@ -90,10 +94,24 @@ function App() {
         />
 
         {/* ==============================
+            AI MOCK INTERVIEW
+        ============================== */}
+
+        <Route
+          path="/ai-interview"
+          element={
+            <ProtectedRoute>
+              <AIInterview />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ==============================
             PAGE NOT FOUND
         ============================== */}
 
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </BrowserRouter>
   );
