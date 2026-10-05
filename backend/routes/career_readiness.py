@@ -69,33 +69,27 @@ def calculate_profile_completeness(resume):
 
 def calculate_resume_readiness(resume):
     """
-    Resume readiness uses the existing TalentLens
-    resume analysis.
+    Resume readiness uses TalentLens' existing
+    resume analysis overall score.
 
-    ATS compatibility is the main resume signal.
-    Resume completeness is a supporting signal.
+    The overall score already combines:
+    ATS compatibility,
+    semantic matching,
+    skills,
+    experience,
+    and education.
     """
 
     if not resume:
         return 0
 
-    ats_score = clamp_score(
-        resume.get("ats_score", 0)
-    )
-
-    completeness = calculate_profile_completeness(
-        resume
-    )
-
-    # ATS is the primary resume signal.
-    resume_score = (
-        ats_score * 0.75
-        +
-        completeness * 0.25
+    overall_score = resume.get(
+        "overall_score",
+        0
     )
 
     return clamp_score(
-        resume_score
+        overall_score
     )
 
 

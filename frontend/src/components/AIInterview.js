@@ -40,45 +40,142 @@ import {
 import API from "../services/api";
 
 
+// =====================================================
+// ACCOUNT-SPECIFIC STORAGE
+// =====================================================
+
+const getCurrentUserEmail = () => {
+
+  const token =
+    localStorage.getItem("token") ||
+    localStorage.getItem("access_token");
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+
+    const parts =
+      token.split(".");
+
+    if (parts.length < 2) {
+      return null;
+    }
+
+    const base64 =
+      parts[1]
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+    const paddedBase64 =
+      base64 +
+      "=".repeat(
+        (4 - (base64.length % 4)) % 4
+      );
+
+    const payload =
+      JSON.parse(
+        atob(paddedBase64)
+      );
+
+    return typeof payload.sub === "string"
+      ? payload.sub.toLowerCase()
+      : payload.sub !== undefined
+      ? String(payload.sub).toLowerCase()
+      : null;
+
+  } catch (error) {
+
+    console.error(
+      "Unable to identify logged-in user:",
+      error
+    );
+
+    return null;
+  }
+};
+
+
+const getStorageKey = (baseKey) => {
+
+  const email =
+    getCurrentUserEmail();
+
+  if (!email) {
+    return baseKey;
+  }
+
+  return `${baseKey}_${encodeURIComponent(email)}`;
+};
+
+
+const INTERVIEW_DATA_BASE_KEY =
+  "talentlens_interview_data";
+
+const TARGET_JOB_BASE_KEY =
+  "talentlens_target_job";
+
+const JOB_DESCRIPTION_BASE_KEY =
+  "talentlens_job_description";
+
+
+// =====================================================
+// MAIN COMPONENT
+// =====================================================
+
 function AIInterview() {
 
   // =====================================================
   // RESUME DATA
   // =====================================================
 
-  const [role, setRole] = useState("");
+  const [role, setRole] =
+    useState("");
 
-  const [skills, setSkills] = useState("");
+  const [skills, setSkills] =
+    useState("");
 
-  const [education, setEducation] = useState([]);
+  const [education, setEducation] =
+    useState([]);
 
-  const [experience, setExperience] = useState([]);
+  const [experience, setExperience] =
+    useState([]);
 
-  const [resumeText, setResumeText] = useState("");
+  const [resumeText, setResumeText] =
+    useState("");
+
+  const [targetJob, setTargetJob] =
+    useState("");
+
+  const [jobDescription, setJobDescription] =
+    useState("");
 
 
   // =====================================================
   // PAGE MODE
   // =====================================================
 
-  const [mode, setMode] = useState("hub");
+  const [mode, setMode] =
+    useState("hub");
 
 
   // =====================================================
   // INTERVIEW PROGRESS
   // =====================================================
 
-  const [interviewStats, setInterviewStats] = useState({
-    has_history: false,
-    total_interviews: 0,
-    total_questions: 0,
-    average_score: 0,
-    best_score: 0,
-    latest_score: 0,
-    improvement: 0,
-    readiness_level: "Not Started",
-    recent_attempts: [],
-  });
+  const [interviewStats, setInterviewStats] =
+    useState({
+      has_history: false,
+      total_interviews: 0,
+      total_questions: 0,
+      average_score: 0,
+      best_score: 0,
+      latest_score: 0,
+      improvement: 0,
+      readiness_level: "Not Started",
+      recent_attempts: [],
+    });
 
   const [statsLoading, setStatsLoading] =
     useState(false);
@@ -88,7 +185,8 @@ function AIInterview() {
   // INTERVIEW STATE
   // =====================================================
 
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] =
+    useState([]);
 
   const [currentQuestion, setCurrentQuestion] =
     useState(0);
@@ -127,7 +225,7 @@ function AIInterview() {
 
 
   // =====================================================
-  // CAMERA
+  // CAMERA + MICROPHONE
   // =====================================================
 
   const videoRef =
@@ -160,47 +258,168 @@ function AIInterview() {
 
   useEffect(() => {
 
-    const savedData =
-      localStorage.getItem(
-        "talentlens_interview_data"
+    const accountInterviewKey =
+      getStorageKey(
+        INTERVIEW_DATA_BASE_KEY
       );
 
+    const accountTargetJobKey =
+      getStorageKey(
+        TARGET_JOB_BASE_KEY
+      );
+
+    const accountJobDescriptionKey =
+      getStorageKey(
+        JOB_DESCRIPTION_BASE_KEY
+      );
+
+
+    let savedData =
+      localStorage.getItem(
+        accountInterviewKey
+      );
+
+
+    // ResumeUpload.js uses the generic key.
     if (!savedData) {
-      return;
+
+      savedData =
+        localStorage.getItem(
+          INTERVIEW_DATA_BASE_KEY
+        );
+
     }
+
+
+    const savedTargetJob =
+      localStorage.getItem(
+        accountTargetJobKey
+      ) ||
+      localStorage.getItem(
+        TARGET_JOB_BASE_KEY
+      );
+
+
+    const savedJobDescription =
+      localStorage.getItem(
+        accountJobDescriptionKey
+      ) ||
+      localStorage.getItem(
+        JOB_DESCRIPTION_BASE_KEY
+      );
+
+
+    if (savedTargetJob) {
+
+      setTargetJob(
+        savedTargetJob
+      );
+
+    }
+
+
+    if (savedJobDescription) {
+
+      setJobDescription(
+        savedJobDescription
+      );
+
+    }
+
+
+    if (!savedData) {
+
+      console.log(
+        "No saved interview resume data found."
+      );
+
+      return;
+
+    }
+
 
     try {
 
       const data =
-        JSON.parse(savedData);
+        JSON.parse(
+          savedData
+        );
+
 
       setRole(
-        data.predictedRole || ""
+        data.predictedRole ||
+        data.predicted_role ||
+        data.role ||
+        ""
       );
 
-      setSkills(
-        Array.isArray(data.skills)
-          ? data.skills.join(", ")
-          : ""
-      );
+
+      if (
+        Array.isArray(
+          data.skills
+        )
+      ) {
+
+        setSkills(
+          data.skills
+            .map(
+              (skill) =>
+                String(skill).trim()
+            )
+            .filter(Boolean)
+            .join(", ")
+        );
+
+      } else if (
+        typeof data.skills ===
+        "string"
+      ) {
+
+        setSkills(
+          data.skills
+        );
+
+      } else {
+
+        setSkills("");
+
+      }
+
 
       setEducation(
-        Array.isArray(data.education)
+        Array.isArray(
+          data.education
+        )
           ? data.education
           : []
       );
 
+
       setExperience(
-        Array.isArray(data.experience)
+        Array.isArray(
+          data.experience
+        )
           ? data.experience
           : []
       );
 
+
       setResumeText(
-        typeof data.resumeText === "string"
+        typeof data.resumeText ===
+        "string"
           ? data.resumeText
+          : typeof data.resume_text ===
+            "string"
+          ? data.resume_text
           : ""
       );
+
+
+      console.log(
+        "AI Interview resume data loaded:",
+        data
+      );
+
 
     } catch (error) {
 
@@ -219,90 +438,206 @@ function AIInterview() {
   // =====================================================
 
   const loadInterviewStats =
-    useCallback(async () => {
+    useCallback(
+      async () => {
 
-      const token =
-        localStorage.getItem("token");
+        const token =
+          localStorage.getItem("token") ||
+          localStorage.getItem("access_token");
 
-      if (!token) {
-        return;
-      }
+        if (!token) {
+          return;
+        }
 
-      try {
 
-        setStatsLoading(true);
+        try {
 
-        const response =
-          await API.get(
-            "/interview_stats"
+          setStatsLoading(true);
+
+
+          const response =
+            await API.get(
+              "/interview_stats"
+            );
+
+
+          if (response.data) {
+
+            setInterviewStats(
+              response.data
+            );
+
+          }
+
+
+        } catch (error) {
+
+          console.error(
+            "Unable to load interview statistics:",
+            error.response?.data ||
+            error.message
           );
 
-        if (response.data) {
 
-          setInterviewStats(
-            response.data
-          );
+        } finally {
+
+          setStatsLoading(false);
 
         }
 
-      } catch (error) {
-
-        console.error(
-          "Unable to load interview statistics:",
-          error.response?.data ||
-          error.message
-        );
-
-      } finally {
-
-        setStatsLoading(false);
-
-      }
-
-    }, []);
+      },
+      []
+    );
 
 
   useEffect(() => {
 
     loadInterviewStats();
 
-  }, [loadInterviewStats]);
+  }, [
+    loadInterviewStats,
+  ]);
+
+
+  // =====================================================
+  // GET SKILL LIST
+  // =====================================================
+
+  const getSkillList = () => {
+
+    return skills
+      .split(",")
+      .map(
+        (skill) =>
+          skill.trim()
+      )
+      .filter(Boolean);
+
+  };
 
 
   // =====================================================
   // SPEAK QUESTION
+  // IMPORTANT:
+  // No voiceschanged handler.
+  // No undefined speak() function.
   // =====================================================
 
-  const speakQuestion =
-    (text) => {
+  const speakQuestion = (text) => {
 
-      if (
-        !("speechSynthesis" in window)
-      ) {
-        return;
-      }
+    if (
+      !("speechSynthesis" in window) ||
+      !text ||
+      !String(text).trim()
+    ) {
 
-      window.speechSynthesis.cancel();
+      return;
+
+    }
+
+
+    try {
+
+      const synthesis =
+        window.speechSynthesis;
+
+
+      synthesis.cancel();
+
+      synthesis.resume();
+
 
       const speech =
         new SpeechSynthesisUtterance(
-          text
+          String(text).trim()
         );
 
-      speech.lang = "en-US";
-      speech.rate = 0.9;
-      speech.pitch = 1;
-      speech.volume = 1;
 
-      window.speechSynthesis.speak(
+      speech.lang =
+        "en-US";
+
+      speech.rate =
+        0.9;
+
+      speech.pitch =
+        1;
+
+      speech.volume =
+        1;
+
+
+      const voices =
+        synthesis.getVoices();
+
+
+      const englishVoice =
+        voices.find(
+          (voice) =>
+            voice.lang &&
+            voice.lang
+              .toLowerCase()
+              .startsWith("en")
+        );
+
+
+      if (englishVoice) {
+
+        speech.voice =
+          englishVoice;
+
+      }
+
+
+      speech.onstart = () => {
+
+        console.log(
+          "AI interviewer started speaking"
+        );
+
+      };
+
+
+      speech.onend = () => {
+
+        console.log(
+          "AI interviewer finished speaking"
+        );
+
+      };
+
+
+      speech.onerror = (
+        event
+      ) => {
+
+        console.error(
+          "AI interviewer speech error:",
+          event
+        );
+
+      };
+
+
+      synthesis.speak(
         speech
       );
 
-    };
+
+    } catch (error) {
+
+      console.error(
+        "Speech synthesis error:",
+        error
+      );
+
+    }
+
+  };
 
 
   // =====================================================
-  // CAMERA
+  // CAMERA + MICROPHONE START
+  // BOTH ARE REQUIRED
   // =====================================================
 
   const startCamera =
@@ -316,18 +651,21 @@ function AIInterview() {
         ) {
 
           alert(
-            "Camera is not supported by this browser."
+            "Camera and microphone are not supported by this browser. Please use Google Chrome."
           );
 
           return false;
 
         }
 
+
+        // Request BOTH camera and microphone.
         const stream =
           await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: true,
           });
+
 
         const videoTracks =
           stream.getVideoTracks();
@@ -336,27 +674,9 @@ function AIInterview() {
           stream.getAudioTracks();
 
 
+        // Both tracks must exist.
         if (
-          videoTracks.length === 0
-        ) {
-
-          stream
-            .getTracks()
-            .forEach(
-              (track) =>
-                track.stop()
-            );
-
-          alert(
-            "No webcam was detected."
-          );
-
-          return false;
-
-        }
-
-
-        if (
+          videoTracks.length === 0 ||
           audioTracks.length === 0
         ) {
 
@@ -367,32 +687,139 @@ function AIInterview() {
                 track.stop()
             );
 
+
           alert(
-            "A microphone is required."
+            "Both camera and microphone access are required to start the interview."
           );
+
 
           return false;
 
         }
 
 
+        // Camera must be live.
+        const cameraReady =
+          videoTracks.some(
+            (track) =>
+              track.readyState ===
+              "live"
+          );
+
+
+        // Microphone must be live.
+        const microphoneReady =
+          audioTracks.some(
+            (track) =>
+              track.readyState ===
+              "live"
+          );
+
+
+        if (
+          !cameraReady ||
+          !microphoneReady
+        ) {
+
+          stream
+            .getTracks()
+            .forEach(
+              (track) =>
+                track.stop()
+            );
+
+
+          alert(
+            "Camera and microphone must both be active before the interview can start."
+          );
+
+
+          return false;
+
+        }
+
+
+        // Save valid stream.
         streamRef.current =
           stream;
 
-        setCameraActive(true);
+
+        setCameraActive(
+          true
+        );
+
 
         return true;
+
 
       } catch (error) {
 
         console.error(
-          "Camera error:",
+          "Camera/microphone permission failed:",
           error
         );
 
-        alert(
-          "Please allow camera and microphone access."
+
+        if (
+          streamRef.current
+        ) {
+
+          streamRef.current
+            .getTracks()
+            .forEach(
+              (track) =>
+                track.stop()
+            );
+
+          streamRef.current =
+            null;
+
+        }
+
+
+        setCameraActive(
+          false
         );
+
+
+        if (
+          error.name ===
+          "NotAllowedError"
+        ) {
+
+          alert(
+            "Camera and microphone access are required. Please click Allow for both permissions and try again."
+          );
+
+
+        } else if (
+          error.name ===
+          "NotFoundError"
+        ) {
+
+          alert(
+            "Camera or microphone was not found. Please connect both devices and try again."
+          );
+
+
+        } else if (
+          error.name ===
+          "NotReadableError"
+        ) {
+
+          alert(
+            "Your camera or microphone is already being used by another application. Close it and try again."
+          );
+
+
+        } else {
+
+          alert(
+            "Both camera and microphone access are required to start the interview."
+          );
+
+        }
+
 
         return false;
 
@@ -412,6 +839,7 @@ function AIInterview() {
         videoRef.current =
           element;
 
+
         if (
           element &&
           streamRef.current
@@ -419,6 +847,7 @@ function AIInterview() {
 
           element.srcObject =
             streamRef.current;
+
 
           element
             .play()
@@ -440,12 +869,19 @@ function AIInterview() {
   useEffect(() => {
 
     if (
-      cameraActive &&
-      interviewStarted
+      !cameraActive ||
+      !interviewStarted ||
+      !streamRef.current
     ) {
 
-      const timer =
-        setTimeout(() => {
+      return;
+
+    }
+
+
+    const timer =
+      setTimeout(
+        () => {
 
           if (
             videoRef.current &&
@@ -455,6 +891,7 @@ function AIInterview() {
             videoRef.current.srcObject =
               streamRef.current;
 
+
             videoRef.current
               .play()
               .catch(
@@ -463,16 +900,19 @@ function AIInterview() {
 
           }
 
-        }, 100);
+        },
+        100
+      );
 
-      return () =>
-        clearTimeout(timer);
 
-    }
+    return () =>
+      clearTimeout(timer);
+
 
   }, [
     cameraActive,
     interviewStarted,
+    mode,
   ]);
 
 
@@ -496,8 +936,10 @@ function AIInterview() {
 
       }
 
+
       streamRef.current =
         null;
+
 
       if (
         videoRef.current
@@ -508,7 +950,10 @@ function AIInterview() {
 
       }
 
-      setCameraActive(false);
+
+      setCameraActive(
+        false
+      );
 
     };
 
@@ -523,26 +968,40 @@ function AIInterview() {
       window.SpeechRecognition ||
       window.webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
 
-      setVoiceSupported(false);
+    if (
+      !SpeechRecognition
+    ) {
+
+      setVoiceSupported(
+        false
+      );
 
       return;
 
     }
 
+
     const recognition =
       new SpeechRecognition();
 
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+
+    recognition.continuous =
+      true;
+
+    recognition.interimResults =
+      true;
+
+    recognition.lang =
+      "en-US";
 
 
     recognition.onstart =
       () => {
 
-        setListening(true);
+        setListening(
+          true
+        );
 
       };
 
@@ -550,7 +1009,9 @@ function AIInterview() {
     recognition.onend =
       () => {
 
-        setListening(false);
+        setListening(
+          false
+        );
 
       };
 
@@ -559,11 +1020,14 @@ function AIInterview() {
       (event) => {
 
         console.error(
-          "Speech error:",
+          "Speech recognition error:",
           event.error
         );
 
-        setListening(false);
+
+        setListening(
+          false
+        );
 
       };
 
@@ -571,16 +1035,23 @@ function AIInterview() {
     recognition.onresult =
       (event) => {
 
-        let transcript = "";
+        let transcript =
+          "";
+
 
         for (
-          let i = event.resultIndex;
-          i < event.results.length;
+          let i =
+            event.resultIndex;
+
+          i <
+            event.results.length;
+
           i++
         ) {
 
           if (
-            event.results[i].isFinal
+            event.results[i]
+              .isFinal
           ) {
 
             transcript +=
@@ -591,6 +1062,7 @@ function AIInterview() {
           }
 
         }
+
 
         if (
           transcript.trim()
@@ -603,6 +1075,7 @@ function AIInterview() {
                 previous.trim()
                   ? " "
                   : "";
+
 
               return (
                 previous +
@@ -629,10 +1102,17 @@ function AIInterview() {
         recognition.stop();
 
       } catch (error) {
+
         // cleanup
+
       }
 
+
+      recognitionRef.current =
+        null;
+
     };
+
 
   }, []);
 
@@ -644,15 +1124,70 @@ function AIInterview() {
   const startListening =
     () => {
 
-      if (!voiceSupported) {
+      if (
+        !voiceSupported
+      ) {
 
         alert(
-          "Voice recognition is not supported. Use Google Chrome."
+          "Voice recognition is not supported. Please use Google Chrome."
         );
 
         return;
 
       }
+
+
+      if (
+        !interviewStarted
+      ) {
+
+        alert(
+          "Please start the interview first."
+        );
+
+        return;
+
+      }
+
+
+      if (
+        !streamRef.current
+      ) {
+
+        alert(
+          "Microphone access is required for the interview."
+        );
+
+        return;
+
+      }
+
+
+      const microphoneTracks =
+        streamRef.current
+          .getAudioTracks();
+
+
+      const microphoneReady =
+        microphoneTracks.some(
+          (track) =>
+            track.readyState ===
+            "live"
+        );
+
+
+      if (
+        !microphoneReady
+      ) {
+
+        alert(
+          "Microphone access is required. Please allow microphone access and restart the interview."
+        );
+
+        return;
+
+      }
+
 
       try {
 
@@ -661,7 +1196,7 @@ function AIInterview() {
       } catch (error) {
 
         console.log(
-          "Recognition already active."
+          "Speech recognition already active."
         );
 
       }
@@ -681,40 +1216,273 @@ function AIInterview() {
         recognitionRef.current?.stop();
 
       } catch (error) {
+
         // ignore
+
       }
 
-      setListening(false);
+
+      setListening(
+        false
+      );
 
     };
-
-
-  // =====================================================
-  // GET SKILLS ARRAY
+      // =====================================================
+  // RELOAD LATEST RESUME DATA
   // =====================================================
 
-  const getSkillList =
-    () => {
+  const getLatestResumeData = () => {
 
-      return skills
-        .split(",")
-        .map(
-          (skill) =>
-            skill.trim()
-        )
-        .filter(Boolean);
+    let savedData = null;
 
-    };
+
+    // ---------------------------------------------------
+    // ACCOUNT-SPECIFIC KEY
+    // ---------------------------------------------------
+
+    const accountKey =
+      getStorageKey(
+        INTERVIEW_DATA_BASE_KEY
+      );
+
+
+    savedData =
+      localStorage.getItem(
+        accountKey
+      );
+
+
+    // ---------------------------------------------------
+    // GENERIC KEY
+    // ResumeUpload.js uses this key
+    // ---------------------------------------------------
+
+    if (!savedData) {
+
+      savedData =
+        localStorage.getItem(
+          INTERVIEW_DATA_BASE_KEY
+        );
+
+    }
+
+
+    // ---------------------------------------------------
+    // SEARCH OTHER ACCOUNT-SPECIFIC KEYS
+    // ---------------------------------------------------
+
+    if (!savedData) {
+
+      for (
+        let i = 0;
+        i < localStorage.length;
+        i++
+      ) {
+
+        const key =
+          localStorage.key(i);
+
+
+        if (
+          key &&
+          key.startsWith(
+            `${INTERVIEW_DATA_BASE_KEY}_`
+          )
+        ) {
+
+          const value =
+            localStorage.getItem(
+              key
+            );
+
+
+          if (value) {
+
+            savedData =
+              value;
+
+            break;
+
+          }
+
+        }
+
+      }
+
+    }
+
+
+    if (!savedData) {
+
+      return null;
+
+    }
+
+
+    try {
+
+      return JSON.parse(
+        savedData
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Unable to parse latest resume data:",
+        error
+      );
+
+      return null;
+
+    }
+
+  };
 
 
   // =====================================================
   // START INTERVIEW
+  // CAMERA + MICROPHONE REQUIRED
   // =====================================================
 
   const startInterview =
     async (
       type = "resume"
     ) => {
+
+      // ---------------------------------------------------
+      // READ LATEST RESUME DATA DIRECTLY
+      // ---------------------------------------------------
+
+      const latestResumeData =
+        getLatestResumeData();
+
+
+      // ---------------------------------------------------
+      // ROLE
+      // ---------------------------------------------------
+
+      const latestRole =
+        latestResumeData?.predictedRole ||
+        latestResumeData?.predicted_role ||
+        latestResumeData?.role ||
+        role ||
+        "";
+
+
+      // ---------------------------------------------------
+      // SKILLS
+      // ---------------------------------------------------
+
+      let latestSkills = [];
+
+
+      if (
+        Array.isArray(
+          latestResumeData?.skills
+        )
+      ) {
+
+        latestSkills =
+          latestResumeData.skills
+            .map(
+              (skill) =>
+                String(skill).trim()
+            )
+            .filter(Boolean);
+
+      } else if (
+        typeof latestResumeData?.skills ===
+        "string"
+      ) {
+
+        latestSkills =
+          latestResumeData.skills
+            .split(",")
+            .map(
+              (skill) =>
+                skill.trim()
+            )
+            .filter(Boolean);
+
+      } else {
+
+        latestSkills =
+          getSkillList();
+
+      }
+
+
+      // ---------------------------------------------------
+      // EDUCATION
+      // ---------------------------------------------------
+
+      const latestEducation =
+        Array.isArray(
+          latestResumeData?.education
+        )
+          ? latestResumeData.education
+          : education;
+
+
+      // ---------------------------------------------------
+      // EXPERIENCE
+      // ---------------------------------------------------
+
+      const latestExperience =
+        Array.isArray(
+          latestResumeData?.experience
+        )
+          ? latestResumeData.experience
+          : experience;
+
+
+      // ---------------------------------------------------
+      // RESUME TEXT
+      // ---------------------------------------------------
+
+      const latestResumeText =
+        latestResumeData?.resumeText ||
+        latestResumeData?.resume_text ||
+        resumeText ||
+        "";
+
+
+      console.log(
+        "================================"
+      );
+
+      console.log(
+        "START INTERVIEW CLICKED"
+      );
+
+      console.log(
+        "Interview type:",
+        type
+      );
+
+      console.log(
+        "Latest resume data:",
+        latestResumeData
+      );
+
+      console.log(
+        "Role:",
+        latestRole
+      );
+
+      console.log(
+        "Skills:",
+        latestSkills
+      );
+
+      console.log(
+        "================================"
+      );
+
+
+      // ---------------------------------------------------
+      // RESUME VALIDATION
+      // ---------------------------------------------------
 
       const resumeInterview =
         type === "resume" ||
@@ -723,7 +1491,9 @@ function AIInterview() {
 
       if (
         resumeInterview &&
-        !role.trim()
+        !String(
+          latestRole
+        ).trim()
       ) {
 
         alert(
@@ -735,9 +1505,13 @@ function AIInterview() {
       }
 
 
+      // ---------------------------------------------------
+      // TECHNICAL VALIDATION
+      // ---------------------------------------------------
+
       if (
         type === "technical" &&
-        getSkillList().length === 0
+        latestSkills.length === 0
       ) {
 
         alert(
@@ -749,27 +1523,177 @@ function AIInterview() {
       }
 
 
-      setLoading(true);
+      // ---------------------------------------------------
+      // UPDATE STATE
+      // ---------------------------------------------------
+
+      setRole(
+        String(
+          latestRole
+        )
+      );
+
+
+      setSkills(
+        latestSkills.join(", ")
+      );
+
+
+      setEducation(
+        latestEducation || []
+      );
+
+
+      setExperience(
+        latestExperience || []
+      );
+
+
+      setResumeText(
+        String(
+          latestResumeText
+        )
+      );
+
+
+      // ---------------------------------------------------
+      // TARGET JOB
+      // ---------------------------------------------------
+
+      const cleanTargetJob =
+        String(
+          targetJob || ""
+        ).trim();
+
+
+      const cleanJobDescription =
+        String(
+          jobDescription || ""
+        ).trim();
+
 
       try {
 
-        if (
-          type === "resume"
-        ) {
+        localStorage.setItem(
+          getStorageKey(
+            TARGET_JOB_BASE_KEY
+          ),
+          cleanTargetJob
+        );
 
-          const cameraReady =
-            await startCamera();
 
-          if (!cameraReady) {
+        localStorage.setItem(
+          getStorageKey(
+            JOB_DESCRIPTION_BASE_KEY
+          ),
+          cleanJobDescription
+        );
 
-            setLoading(false);
+      } catch (error) {
 
-            return;
+        console.error(
+          "Unable to save target job data:",
+          error
+        );
 
-          }
+      }
+
+
+      // ---------------------------------------------------
+      // LOADING
+      // ---------------------------------------------------
+
+      setLoading(true);
+
+
+      try {
+
+        // =================================================
+        // IMPORTANT:
+        // EVERY INTERVIEW REQUIRES CAMERA + MICROPHONE
+        // =================================================
+
+        const cameraReady =
+          await startCamera();
+
+
+        if (!cameraReady) {
+
+          setLoading(false);
+
+          return;
 
         }
 
+
+        // =================================================
+        // VERIFY ACTIVE STREAM
+        // =================================================
+
+        const activeStream =
+          streamRef.current;
+
+
+        if (!activeStream) {
+
+          alert(
+            "Camera and microphone access are required to start the interview."
+          );
+
+          setLoading(false);
+
+          return;
+
+        }
+
+
+        const videoTracks =
+          activeStream.getVideoTracks();
+
+
+        const audioTracks =
+          activeStream.getAudioTracks();
+
+
+        const cameraReadyNow =
+          videoTracks.some(
+            (track) =>
+              track.readyState ===
+              "live"
+          );
+
+
+        const microphoneReadyNow =
+          audioTracks.some(
+            (track) =>
+              track.readyState ===
+              "live"
+          );
+
+
+        if (
+          !cameraReadyNow ||
+          !microphoneReadyNow
+        ) {
+
+          stopCamera();
+
+
+          alert(
+            "Both camera and microphone access must be granted before the interview can start."
+          );
+
+
+          setLoading(false);
+
+          return;
+
+        }
+
+
+        // =================================================
+        // BACKEND REQUEST
+        // =================================================
 
         const response =
           await API.post(
@@ -780,23 +1704,37 @@ function AIInterview() {
                 type,
 
               role:
-                role.trim(),
+                String(
+                  latestRole
+                ).trim(),
 
               skills:
-                getSkillList(),
+                latestSkills,
 
               education:
-                education,
+                latestEducation || [],
 
               experience:
-                experience,
+                latestExperience || [],
 
               resume_text:
-                resumeText,
+                String(
+                  latestResumeText
+                ),
+
+              target_job:
+                cleanTargetJob,
+
+              job_description:
+                cleanJobDescription,
 
             }
           );
 
+
+        // =================================================
+        // QUESTIONS
+        // =================================================
 
         const receivedQuestions =
           Array.isArray(
@@ -812,36 +1750,72 @@ function AIInterview() {
 
           stopCamera();
 
+
           alert(
             "No interview questions were generated."
           );
+
+
+          setLoading(false);
 
           return;
 
         }
 
 
+        // =================================================
+        // START INTERVIEW STATE
+        // =================================================
+
         setInterviewType(
           type
         );
+
 
         setQuestions(
           receivedQuestions
         );
 
-        setCurrentQuestion(0);
 
-        setAnswer("");
+        setCurrentQuestion(
+          0
+        );
 
-        setFeedback(null);
 
-        setResults([]);
+        setAnswer(
+          ""
+        );
 
-        setInterviewFinished(false);
 
-        setInterviewStarted(true);
+        setFeedback(
+          null
+        );
 
-        setMode("interview");
+
+        setResults(
+          []
+        );
+
+
+        setInterviewFinished(
+          false
+        );
+
+
+        setInterviewStarted(
+          true
+        );
+
+
+        setMode(
+          "interview"
+        );
+
+
+        console.log(
+          "Interview started successfully."
+        );
+
 
       } catch (error) {
 
@@ -851,16 +1825,21 @@ function AIInterview() {
           error.message
         );
 
+
         stopCamera();
+
 
         alert(
           error.response?.data?.message ||
           "Unable to start the interview."
         );
 
+
       } finally {
 
-        setLoading(false);
+        setLoading(
+          false
+        );
 
       }
 
@@ -868,42 +1847,92 @@ function AIInterview() {
 
 
   // =====================================================
-  // QUESTION SPEECH
+  // AUTOMATIC QUESTION SPEECH
   // =====================================================
 
   useEffect(() => {
 
     if (
-      interviewStarted &&
-      questions.length > 0 &&
-      !interviewFinished
+      !interviewStarted ||
+      interviewFinished ||
+      questions.length === 0
     ) {
 
-      const question =
-        questions[
-          currentQuestion
-        ];
+      return;
 
-      if (question) {
+    }
 
-        const timer =
-          setTimeout(
-            () => {
 
-              speakQuestion(
-                question
-              );
+    const currentQuestionData =
+      questions[
+        currentQuestion
+      ];
 
-            },
-            700
+
+    // Support both:
+    // "Tell me about yourself."
+    //
+    // and:
+    // { question: "Tell me about yourself." }
+
+    const questionText =
+      typeof currentQuestionData ===
+      "string"
+        ? currentQuestionData
+        : currentQuestionData?.question ||
+          currentQuestionData?.text ||
+          "";
+
+
+    if (
+      !String(
+        questionText
+      ).trim()
+    ) {
+
+      return;
+
+    }
+
+
+    console.log(
+      "AI interviewer question:",
+      questionText
+    );
+
+
+    const timer =
+      setTimeout(
+        () => {
+
+          speakQuestion(
+            String(
+              questionText
+            ).trim()
           );
 
-        return () =>
-          clearTimeout(timer);
+        },
+        800
+      );
+
+
+    return () => {
+
+      clearTimeout(
+        timer
+      );
+
+
+      if (
+        "speechSynthesis" in
+        window
+      ) {
+
+        window.speechSynthesis.cancel();
 
       }
 
-    }
+    };
 
   }, [
     interviewStarted,
@@ -932,29 +1961,98 @@ function AIInterview() {
 
       }
 
+
+      // ---------------------------------------------------
+      // STOP VOICE INPUT
+      // ---------------------------------------------------
+
       stopListening();
 
-      setEvaluationLoading(true);
+
+      // ---------------------------------------------------
+      // VERIFY MICROPHONE
+      // ---------------------------------------------------
+
+      if (
+        !streamRef.current
+      ) {
+
+        alert(
+          "Camera and microphone access are required during the interview."
+        );
+
+        return;
+
+      }
+
+
+      const audioTracks =
+        streamRef.current
+          .getAudioTracks();
+
+
+      const microphoneReady =
+        audioTracks.some(
+          (track) =>
+            track.readyState ===
+            "live"
+        );
+
+
+      if (
+        !microphoneReady
+      ) {
+
+        alert(
+          "Microphone access has been lost. The interview cannot continue."
+        );
+
+        return;
+
+      }
+
+
+      setEvaluationLoading(
+        true
+      );
+
 
       try {
 
-        const question =
+        const currentQuestionData =
           questions[
             currentQuestion
           ];
+
+
+        const questionText =
+          typeof currentQuestionData ===
+          "string"
+            ? currentQuestionData
+            : currentQuestionData?.question ||
+              currentQuestionData?.text ||
+              "";
+
 
         const response =
           await API.post(
             "/evaluate_answer",
             {
-              question,
-              answer: answer.trim(),
+
+              question:
+                questionText,
+
+              answer:
+                answer.trim(),
+
             }
           );
+
 
         setFeedback(
           response.data
         );
+
 
       } catch (error) {
 
@@ -964,14 +2062,18 @@ function AIInterview() {
           error.message
         );
 
+
         alert(
           error.response?.data?.message ||
           "Unable to evaluate answer."
         );
 
+
       } finally {
 
-        setEvaluationLoading(false);
+        setEvaluationLoading(
+          false
+        );
 
       }
 
@@ -980,6 +2082,8 @@ function AIInterview() {
 
   // =====================================================
   // SAVE INTERVIEW
+  // IMPORTANT:
+  // KEEP OVERALL SCORE CALCULATION
   // =====================================================
 
   const saveInterview =
@@ -996,30 +2100,42 @@ function AIInterview() {
 
       }
 
+
       try {
 
-        setSavingInterview(true);
+        setSavingInterview(
+          true
+        );
+
 
         const scores =
           finalResults
             .map(
               (item) =>
                 Number(
-                  item.evaluation?.score
+                  item?.evaluation?.score ||
+                  0
                 )
             )
             .filter(
               (score) =>
-                !Number.isNaN(score)
+                !Number.isNaN(
+                  score
+                )
             );
 
+
         const overallScore =
-          scores.length
+          scores.length > 0
             ? Number(
                 (
                   scores.reduce(
-                    (total, score) =>
-                      total + score,
+                    (
+                      total,
+                      score
+                    ) =>
+                      total +
+                      score,
                     0
                   ) /
                   scores.length
@@ -1027,9 +2143,17 @@ function AIInterview() {
               )
             : 0;
 
+
+        console.log(
+          "Final Overall Score:",
+          overallScore
+        );
+
+
         await API.post(
           "/save_interview",
           {
+
             interview_type:
               interviewType,
 
@@ -1047,12 +2171,16 @@ function AIInterview() {
 
             results:
               finalResults,
+
           }
         );
 
+
         await loadInterviewStats();
 
+
         return true;
+
 
       } catch (error) {
 
@@ -1062,27 +2190,108 @@ function AIInterview() {
           error.message
         );
 
+
         return false;
+
 
       } finally {
 
-        setSavingInterview(false);
+        setSavingInterview(
+          false
+        );
 
       }
 
     };
-      // =====================================================
+
+
+  // =====================================================
   // NEXT QUESTION
   // =====================================================
 
   const nextQuestion =
     async () => {
 
-      window.speechSynthesis?.cancel();
+      // Stop AI speech before changing question.
+      if (
+        "speechSynthesis" in
+        window
+      ) {
+
+        window.speechSynthesis.cancel();
+
+      }
+
 
       stopListening();
 
-      if (!feedback) {
+
+      // ---------------------------------------------------
+      // CAMERA + MICROPHONE MUST REMAIN ACTIVE
+      // ---------------------------------------------------
+
+      if (
+        !streamRef.current
+      ) {
+
+        alert(
+          "Camera and microphone access are required to continue the interview."
+        );
+
+        return;
+
+      }
+
+
+      const activeStream =
+        streamRef.current;
+
+
+      const cameraTracks =
+        activeStream.getVideoTracks();
+
+
+      const microphoneTracks =
+        activeStream.getAudioTracks();
+
+
+      const cameraReady =
+        cameraTracks.some(
+          (track) =>
+            track.readyState ===
+            "live"
+        );
+
+
+      const microphoneReady =
+        microphoneTracks.some(
+          (track) =>
+            track.readyState ===
+            "live"
+        );
+
+
+      if (
+        !cameraReady ||
+        !microphoneReady
+      ) {
+
+        alert(
+          "Both camera and microphone access must remain active during the interview."
+        );
+
+        return;
+
+      }
+
+
+      // ---------------------------------------------------
+      // FEEDBACK REQUIRED
+      // ---------------------------------------------------
+
+      if (
+        !feedback
+      ) {
 
         alert(
           "Please evaluate your answer before continuing."
@@ -1092,15 +2301,34 @@ function AIInterview() {
 
       }
 
-      const currentQuestionText =
+
+      // ---------------------------------------------------
+      // CURRENT QUESTION
+      // ---------------------------------------------------
+
+      const currentQuestionData =
         questions[
           currentQuestion
         ];
 
+
+      const questionText =
+        typeof currentQuestionData ===
+        "string"
+          ? currentQuestionData
+          : currentQuestionData?.question ||
+            currentQuestionData?.text ||
+            "";
+
+
+      // ---------------------------------------------------
+      // CURRENT RESULT
+      // ---------------------------------------------------
+
       const currentResult = {
 
         question:
-          currentQuestionText,
+          questionText,
 
         answer:
           answer.trim(),
@@ -1110,15 +2338,20 @@ function AIInterview() {
 
       };
 
+
+      // ---------------------------------------------------
+      // FINAL RESULTS ARRAY
+      // ---------------------------------------------------
+
       const finalResults = [
         ...results,
         currentResult,
       ];
 
 
-      // -------------------------------------------------
+      // =================================================
       // MORE QUESTIONS
-      // -------------------------------------------------
+      // =================================================
 
       if (
         currentQuestion <
@@ -1129,46 +2362,61 @@ function AIInterview() {
           finalResults
         );
 
+
         setCurrentQuestion(
           (previous) =>
             previous + 1
         );
 
-        setAnswer("");
 
-        setFeedback(null);
+        setAnswer(
+          ""
+        );
+
+
+        setFeedback(
+          null
+        );
+
 
         return;
 
       }
 
 
-      // -------------------------------------------------
+      // =================================================
       // LAST QUESTION
-      // -------------------------------------------------
+      // =================================================
 
       stopCamera();
+
 
       setResults(
         finalResults
       );
 
+
       await saveInterview(
         finalResults
       );
+
 
       setInterviewFinished(
         true
       );
 
+
       setInterviewStarted(
         false
       );
 
+
+      setMode(
+        "results"
+      );
+
     };
-
-
-  // =====================================================
+      // =====================================================
   // RESET INTERVIEW
   // =====================================================
 
@@ -1180,6 +2428,7 @@ function AIInterview() {
       stopCamera();
 
       window.speechSynthesis?.cancel();
+
 
       setQuestions([]);
 
@@ -1218,7 +2467,7 @@ function AIInterview() {
             ) =>
               total +
               Number(
-                item.evaluation?.score ||
+                item?.evaluation?.score ||
                 0
               ),
             0
@@ -1263,6 +2512,7 @@ function AIInterview() {
 
       };
 
+
       return (
         labels[type] ||
         "Interview Practice"
@@ -1297,6 +2547,7 @@ function AIInterview() {
 
       };
 
+
       return (
         descriptions[type] ||
         ""
@@ -1318,14 +2569,25 @@ function AIInterview() {
       ) {
 
         return {
+
           overall: 0,
+
           communication: 0,
+
           technical: 0,
+
           structure: 0,
+
           practical: 0,
-          strongest: "Not enough data",
-          weakest: "Not enough data",
+
+          strongest:
+            "Not enough data",
+
+          weakest:
+            "Not enough data",
+
           plan: [],
+
         };
 
       }
@@ -1335,7 +2597,7 @@ function AIInterview() {
         results.map(
           (item) =>
             Number(
-              item.evaluation?.score ||
+              item?.evaluation?.score ||
               0
             )
         );
@@ -1354,10 +2616,10 @@ function AIInterview() {
           : 0;
 
 
-      /*
-       * The evaluator may return detailed analysis
-       * values. We use those when available.
-       */
+      // ---------------------------------------------------
+      // GET DETAILED METRIC AVERAGE
+      // ---------------------------------------------------
+
       const getMetricAverage =
         (metric) => {
 
@@ -1366,13 +2628,17 @@ function AIInterview() {
               .map(
                 (item) =>
                   Number(
-                    item.evaluation?.analysis?.[metric]
+                    item?.evaluation
+                      ?.analysis?.[metric]
                   )
               )
               .filter(
                 (value) =>
-                  !Number.isNaN(value)
+                  !Number.isNaN(
+                    value
+                  )
               );
+
 
           if (
             values.length === 0
@@ -1381,6 +2647,7 @@ function AIInterview() {
             return average;
 
           }
+
 
           return Math.round(
             values.reduce(
@@ -1399,15 +2666,18 @@ function AIInterview() {
           "clarity"
         );
 
+
       const technical =
         getMetricAverage(
           "technical"
         );
 
+
       const structure =
         getMetricAverage(
           "structure"
         );
+
 
       const practical =
         getMetricAverage(
@@ -1416,36 +2686,55 @@ function AIInterview() {
 
 
       const areas = [
+
         {
-          name: "Communication",
-          score: communication,
+          name:
+            "Communication",
+
+          score:
+            communication,
         },
+
         {
-          name: "Technical Knowledge",
-          score: technical,
+          name:
+            "Technical Knowledge",
+
+          score:
+            technical,
         },
+
         {
-          name: "Answer Structure",
-          score: structure,
+          name:
+            "Answer Structure",
+
+          score:
+            structure,
         },
+
         {
-          name: "Practical Understanding",
-          score: practical,
+          name:
+            "Practical Understanding",
+
+          score:
+            practical,
         },
+
       ];
 
 
       const strongestArea =
         [...areas].sort(
           (a, b) =>
-            b.score - a.score
+            b.score -
+            a.score
         )[0];
 
 
       const weakestArea =
         [...areas].sort(
           (a, b) =>
-            a.score - b.score
+            a.score -
+            b.score
         )[0];
 
 
@@ -1546,8 +2835,11 @@ function AIInterview() {
         recognitionRef.current?.stop();
 
       } catch (error) {
+
         // cleanup
+
       }
+
 
       window.speechSynthesis?.cancel();
 
@@ -1571,7 +2863,7 @@ function AIInterview() {
 
 
   // =====================================================
-  // HUB
+  // INTERVIEW CENTER / HUB
   // =====================================================
 
   if (
@@ -1583,10 +2875,12 @@ function AIInterview() {
       <Box
         sx={{
           minHeight: "100vh",
+
           py: {
             xs: 4,
             md: 7,
           },
+
           background:
             "radial-gradient(circle at 10% 10%,rgba(124,77,255,.13),transparent 25%),radial-gradient(circle at 90% 20%,rgba(25,118,210,.12),transparent 25%),linear-gradient(180deg,#f7f9ff,#edf2fa)",
         }}
@@ -1595,6 +2889,10 @@ function AIInterview() {
         <Container
           maxWidth="lg"
         >
+
+          {/* =================================================
+              PAGE HEADER
+          ================================================= */}
 
           <Box
             sx={{
@@ -1616,12 +2914,14 @@ function AIInterview() {
               }}
             />
 
+
             <Typography
               variant="h2"
               sx={{
                 fontWeight: 950,
                 letterSpacing: "-2px",
                 color: "#101828",
+
                 fontSize: {
                   xs: "2.4rem",
                   md: "4rem",
@@ -1631,15 +2931,18 @@ function AIInterview() {
               Become interview-ready.
             </Typography>
 
+
             <Typography
               sx={{
                 mt: 1.5,
                 maxWidth: 760,
                 color: "#667085",
+
                 fontSize: {
                   xs: "1rem",
                   md: "1.15rem",
                 },
+
                 lineHeight: 1.8,
               }}
             >
@@ -1653,7 +2956,7 @@ function AIInterview() {
 
 
           {/* =================================================
-              PROGRESS
+              INTERVIEW PROGRESS
           ================================================= */}
 
           <Card
@@ -1661,9 +2964,12 @@ function AIInterview() {
               mb: 4,
               borderRadius: 5,
               overflow: "hidden",
+
               background:
                 "linear-gradient(135deg,#101828,#1d2b64,#5b3fb8)",
+
               color: "white",
+
               boxShadow:
                 "0 25px 60px rgba(41,55,120,.25)",
             }}
@@ -1683,11 +2989,14 @@ function AIInterview() {
                   xs: "column",
                   md: "row",
                 }}
+
                 justifyContent="space-between"
+
                 alignItems={{
                   xs: "flex-start",
                   md: "center",
                 }}
+
                 spacing={2}
               >
 
@@ -1699,6 +3008,7 @@ function AIInterview() {
                   >
                     📈 Your Interview Progress
                   </Typography>
+
 
                   <Typography
                     sx={{
@@ -1740,41 +3050,52 @@ function AIInterview() {
                   [
                     "Latest Score",
                     `${Number(
-                      interviewStats.latest_score || 0
+                      interviewStats.latest_score ||
+                      0
                     ).toFixed(0)}/100`,
                   ],
 
                   [
                     "Average Score",
                     `${Number(
-                      interviewStats.average_score || 0
+                      interviewStats.average_score ||
+                      0
                     ).toFixed(0)}/100`,
                   ],
 
                   [
                     "Best Score",
                     `${Number(
-                      interviewStats.best_score || 0
+                      interviewStats.best_score ||
+                      0
                     ).toFixed(0)}/100`,
                   ],
 
                   [
                     "Improvement",
-                    `${Number(
-                      interviewStats.improvement || 0
-                    ) >= 0 ? "+" : ""}${Number(
-                      interviewStats.improvement || 0
+                    `${
+                      Number(
+                        interviewStats.improvement ||
+                        0
+                      ) >= 0
+                        ? "+"
+                        : ""
+                    }${Number(
+                      interviewStats.improvement ||
+                      0
                     ).toFixed(0)} pts`,
                   ],
 
                   [
                     "Interviews",
-                    interviewStats.total_interviews || 0,
+                    interviewStats.total_interviews ||
+                    0,
                   ],
 
                   [
                     "Questions",
-                    interviewStats.total_questions || 0,
+                    interviewStats.total_questions ||
+                    0,
                   ],
 
                 ].map(
@@ -1794,10 +3115,13 @@ function AIInterview() {
                           p: 2,
                           height: "100%",
                           borderRadius: 3,
+
                           background:
                             "rgba(255,255,255,.09)",
+
                           border:
                             "1px solid rgba(255,255,255,.12)",
+
                           color: "white",
                         }}
                       >
@@ -1812,13 +3136,16 @@ function AIInterview() {
                           {item[0]}
                         </Typography>
 
+
                         <Typography
                           sx={{
                             mt: 1,
+
                             fontSize: {
                               xs: "1.25rem",
                               md: "1.45rem",
                             },
+
                             fontWeight: 950,
                           }}
                         >
@@ -1834,6 +3161,10 @@ function AIInterview() {
 
               </Grid>
 
+
+              {/* =================================================
+                  READINESS
+              ================================================= */}
 
               <Box
                 sx={{
@@ -1856,23 +3187,29 @@ function AIInterview() {
                     Interview Readiness
                   </Typography>
 
+
                   <Chip
                     label={
                       interviewStats.readiness_level ||
                       "Not Started"
                     }
+
                     sx={{
                       color: "white",
+
                       background:
                         "rgba(255,255,255,.14)",
+
                       fontWeight: 800,
                     }}
                   />
 
                 </Stack>
 
+
                 <LinearProgress
                   variant="determinate"
+
                   value={
                     Math.max(
                       0,
@@ -1882,14 +3219,18 @@ function AIInterview() {
                       )
                     )
                   }
+
                   sx={{
                     height: 12,
                     borderRadius: 10,
+
                     background:
                       "rgba(255,255,255,.12)",
+
                     "& .MuiLinearProgress-bar":
                       {
                         borderRadius: 10,
+
                         background:
                           "linear-gradient(90deg,#42a5f5,#b388ff)",
                       },
@@ -1908,7 +3249,8 @@ function AIInterview() {
           ================================================= */}
 
           {interviewStats.has_history &&
-            interviewStats.recent_attempts?.length > 0 && (
+            interviewStats.recent_attempts?.length >
+              0 && (
 
               <Card
                 sx={{
@@ -1933,6 +3275,7 @@ function AIInterview() {
                   >
                     🕒 Recent Interview Attempts
                   </Typography>
+
 
                   <Typography
                     sx={{
@@ -1974,8 +3317,10 @@ function AIInterview() {
                               sx={{
                                 p: 2.5,
                                 borderRadius: 3,
+
                                 border:
                                   "1px solid #e5e7eb",
+
                                 background:
                                   "#f8fafc",
                               }}
@@ -1995,6 +3340,7 @@ function AIInterview() {
                                     Attempt {index + 1}
                                   </Typography>
 
+
                                   <Typography
                                     variant="body2"
                                     color="text.secondary"
@@ -2009,17 +3355,22 @@ function AIInterview() {
 
                                 </Box>
 
+
                                 <Chip
                                   label={`${Number(
-                                    attempt.score || 0
+                                    attempt.score ||
+                                    0
                                   ).toFixed(0)}/100`}
+
                                   color="primary"
+
                                   sx={{
                                     fontWeight: 900,
                                   }}
                                 />
 
                               </Stack>
+
 
                               <Typography
                                 variant="body2"
@@ -2028,7 +3379,8 @@ function AIInterview() {
                                   mt: 1.5,
                                 }}
                               >
-                                {attempt.total_questions || 0}{" "}
+                                {attempt.total_questions ||
+                                  0}{" "}
                                 questions
                               </Typography>
 
@@ -2049,17 +3401,20 @@ function AIInterview() {
 
 
           {/* =================================================
-              RESUME MOCK INTERVIEW
+              AI RESUME MOCK INTERVIEW
           ================================================= */}
 
           <Card
             sx={{
               mb: 4,
               borderRadius: 5,
+
               background:
                 "linear-gradient(135deg,#ffffff,#f3efff)",
+
               border:
                 "1px solid #e4defc",
+
               boxShadow:
                 "0 15px 40px rgba(63,52,120,.10)",
             }}
@@ -2099,6 +3454,7 @@ function AIInterview() {
                       }}
                     />
 
+
                     <Typography
                       variant="h5"
                       fontWeight={950}
@@ -2107,6 +3463,7 @@ function AIInterview() {
                     </Typography>
 
                   </Stack>
+
 
                   <Typography
                     sx={{
@@ -2121,6 +3478,7 @@ function AIInterview() {
                     projects, education and experience.
                   </Typography>
 
+
                   <Stack
                     direction="row"
                     spacing={1}
@@ -2132,9 +3490,13 @@ function AIInterview() {
                   >
 
                     <Chip label="Resume Based" />
+
                     <Chip label="Camera" />
+
                     <Chip label="Voice" />
+
                     <Chip label="Projects" />
+
                     <Chip label="AI Feedback" />
 
                   </Stack>
@@ -2152,21 +3514,26 @@ function AIInterview() {
                     fullWidth
                     variant="contained"
                     size="large"
+
                     endIcon={
                       <ArrowForward />
                     }
+
                     onClick={() =>
                       startInterview(
                         "resume"
                       )
                     }
+
                     disabled={
                       loading
                     }
+
                     sx={{
                       py: 1.7,
                       borderRadius: 3,
                       fontWeight: 900,
+
                       background:
                         "linear-gradient(135deg,#1976d2,#7c4dff)",
                     }}
@@ -2257,7 +3624,8 @@ function AIInterview() {
               },
 
               {
-                key: "resume_questions",
+                key:
+                  "resume_questions",
 
                 title:
                   "Resume Questions",
@@ -2287,6 +3655,7 @@ function AIInterview() {
                     sx={{
                       height: "100%",
                       borderRadius: 4,
+
                       transition:
                         "all .3s ease",
 
@@ -2311,14 +3680,18 @@ function AIInterview() {
                           width: 55,
                           height: 55,
                           borderRadius: 3,
+
                           display: "flex",
                           alignItems:
                             "center",
                           justifyContent:
                             "center",
+
                           color: "white",
+
                           background:
                             item.gradient,
+
                           mb: 2.5,
                         }}
                       >
@@ -2351,14 +3724,17 @@ function AIInterview() {
                           mt: 2,
                           fontWeight: 800,
                         }}
+
                         endIcon={
                           <ArrowForward />
                         }
+
                         onClick={() =>
                           startInterview(
                             item.key
                           )
                         }
+
                         disabled={
                           loading
                         }
@@ -2376,10 +3752,8 @@ function AIInterview() {
             )}
 
           </Grid>
-
-
-          {/* =================================================
-              CHECKLIST
+                    {/* =================================================
+              JOB SEEKER PREPARATION CHECKLIST
           ================================================= */}
 
           <Card
@@ -2458,7 +3832,10 @@ function AIInterview() {
                   ],
 
                 ].map(
-                  (item, index) => (
+                  (
+                    item,
+                    index
+                  ) => (
 
                     <Grid
                       item
@@ -2472,8 +3849,10 @@ function AIInterview() {
                         sx={{
                           p: 2,
                           borderRadius: 3,
+
                           background:
                             "#f7f9fc",
+
                           border:
                             "1px solid #e6eaf0",
                         }}
@@ -2527,8 +3906,10 @@ function AIInterview() {
     );
 
   }
-    // =====================================================
-  // COMPLETED INTERVIEW
+
+
+  // =====================================================
+  // COMPLETED INTERVIEW / RESULTS
   // =====================================================
 
   if (
@@ -2540,29 +3921,51 @@ function AIInterview() {
 
 
     const performanceAreas = [
+
       {
-        title: "Communication",
-        value: analysis.communication,
-        icon: <RecordVoiceOver />,
+        title:
+          "Communication",
+
+        value:
+          analysis.communication,
+
+        icon:
+          <RecordVoiceOver />,
       },
 
       {
-        title: "Technical Knowledge",
-        value: analysis.technical,
-        icon: <Code />,
+        title:
+          "Technical Knowledge",
+
+        value:
+          analysis.technical,
+
+        icon:
+          <Code />,
       },
 
       {
-        title: "Answer Structure",
-        value: analysis.structure,
-        icon: <AutoAwesome />,
+        title:
+          "Answer Structure",
+
+        value:
+          analysis.structure,
+
+        icon:
+          <AutoAwesome />,
       },
 
       {
-        title: "Practical Understanding",
-        value: analysis.practical,
-        icon: <WorkOutline />,
+        title:
+          "Practical Understanding",
+
+        value:
+          analysis.practical,
+
+        icon:
+          <WorkOutline />,
       },
+
     ];
 
 
@@ -2571,10 +3974,12 @@ function AIInterview() {
       <Box
         sx={{
           minHeight: "100vh",
+
           py: {
             xs: 4,
             md: 7,
           },
+
           background:
             "linear-gradient(180deg,#f7f9ff,#edf2fa)",
         }}
@@ -2585,7 +3990,7 @@ function AIInterview() {
         >
 
           {/* =================================================
-              HEADER
+              RESULTS HEADER
           ================================================= */}
 
           <Card
@@ -2593,8 +3998,10 @@ function AIInterview() {
               borderRadius: 5,
               mb: 3,
               overflow: "hidden",
+
               background:
                 "linear-gradient(135deg,#101828,#243b80,#6a3fc7)",
+
               color: "white",
             }}
           >
@@ -2613,33 +4020,44 @@ function AIInterview() {
                   xs: "column",
                   md: "row",
                 }}
+
                 justifyContent="space-between"
+
                 alignItems={{
                   xs: "flex-start",
                   md: "center",
                 }}
+
                 spacing={3}
               >
 
                 <Box>
 
                   <Chip
-                    icon={<CheckCircle />}
+                    icon={
+                      <CheckCircle />
+                    }
+
                     label="INTERVIEW COMPLETED"
+
                     sx={{
                       mb: 2,
                       color: "white",
+
                       background:
                         "rgba(255,255,255,.14)",
+
                       fontWeight: 900,
                     }}
                   />
+
 
                   <Typography
                     variant="h3"
                     sx={{
                       fontWeight: 950,
                       letterSpacing: "-1px",
+
                       fontSize: {
                         xs: "2.1rem",
                         md: "3.2rem",
@@ -2649,12 +4067,15 @@ function AIInterview() {
                     Interview Performance
                   </Typography>
 
+
                   <Typography
                     sx={{
                       mt: 1.5,
                       maxWidth: 720,
+
                       color:
                         "rgba(255,255,255,.75)",
+
                       lineHeight: 1.8,
                     }}
                   >
@@ -2666,17 +4087,26 @@ function AIInterview() {
                 </Box>
 
 
+                {/* =================================================
+                    OVERALL SCORE
+                ================================================= */}
+
                 <Box
                   sx={{
                     minWidth: {
                       xs: "100%",
                       md: 180,
                     },
+
                     textAlign: "center",
+
                     p: 3,
+
                     borderRadius: 4,
+
                     background:
                       "rgba(255,255,255,.10)",
+
                     border:
                       "1px solid rgba(255,255,255,.15)",
                   }}
@@ -2692,6 +4122,7 @@ function AIInterview() {
                     Overall Score
                   </Typography>
 
+
                   <Typography
                     sx={{
                       mt: 0.5,
@@ -2703,9 +4134,11 @@ function AIInterview() {
                     {analysis.overall}
                   </Typography>
 
+
                   <Typography
                     sx={{
                       mt: 0.5,
+
                       color:
                         "rgba(255,255,255,.7)",
                     }}
@@ -2744,8 +4177,10 @@ function AIInterview() {
                 sx={{
                   height: "100%",
                   borderRadius: 4,
+
                   border:
                     "1px solid #d8f0dc",
+
                   background:
                     "linear-gradient(135deg,#ffffff,#f0fff3)",
                 }}
@@ -2758,13 +4193,19 @@ function AIInterview() {
                 >
 
                   <Chip
-                    icon={<EmojiEvents />}
+                    icon={
+                      <EmojiEvents />
+                    }
+
                     label="Strongest Area"
+
                     color="success"
+
                     sx={{
                       fontWeight: 900,
                     }}
                   />
+
 
                   <Typography
                     variant="h5"
@@ -2775,6 +4216,7 @@ function AIInterview() {
                   >
                     {analysis.strongest}
                   </Typography>
+
 
                   <Typography
                     sx={{
@@ -2804,8 +4246,10 @@ function AIInterview() {
                 sx={{
                   height: "100%",
                   borderRadius: 4,
+
                   border:
                     "1px solid #ffe0b2",
+
                   background:
                     "linear-gradient(135deg,#ffffff,#fff8ed)",
                 }}
@@ -2819,12 +4263,15 @@ function AIInterview() {
 
                   <Chip
                     label="Area to Improve"
+
                     sx={{
                       fontWeight: 900,
+
                       background:
                         "#fff0d6",
                     }}
                   />
+
 
                   <Typography
                     variant="h5"
@@ -2835,6 +4282,7 @@ function AIInterview() {
                   >
                     {analysis.weakest}
                   </Typography>
+
 
                   <Typography
                     sx={{
@@ -2857,7 +4305,7 @@ function AIInterview() {
 
 
           {/* =================================================
-              PERFORMANCE AREAS
+              PERFORMANCE BREAKDOWN
           ================================================= */}
 
           <Card
@@ -2882,6 +4330,7 @@ function AIInterview() {
               >
                 Performance Breakdown
               </Typography>
+
 
               <Typography
                 sx={{
@@ -2918,10 +4367,13 @@ function AIInterview() {
                         sx={{
                           p: 2.5,
                           borderRadius: 3,
+
                           border:
                             "1px solid #e5e7eb",
+
                           background:
                             "#f8fafc",
+
                           height: "100%",
                         }}
                       >
@@ -2937,19 +4389,23 @@ function AIInterview() {
                               width: 38,
                               height: 38,
                               borderRadius: 2,
+
                               display: "flex",
                               alignItems:
                                 "center",
                               justifyContent:
                                 "center",
+
                               background:
                                 "#eef4ff",
+
                               color:
                                 "#1976d2",
                             }}
                           >
                             {item.icon}
                           </Box>
+
 
                           <Typography
                             fontWeight={850}
@@ -2967,7 +4423,9 @@ function AIInterview() {
                             fontWeight: 950,
                           }}
                         >
+
                           {item.value}
+
                           <Typography
                             component="span"
                             sx={{
@@ -2979,18 +4437,23 @@ function AIInterview() {
                           >
                             /100
                           </Typography>
+
                         </Typography>
 
 
                         <LinearProgress
                           variant="determinate"
-                          value={Math.max(
-                            0,
-                            Math.min(
-                              100,
-                              item.value
+
+                          value={
+                            Math.max(
+                              0,
+                              Math.min(
+                                100,
+                                item.value
+                              )
                             )
-                          )}
+                          }
+
                           sx={{
                             mt: 1.5,
                             height: 8,
@@ -3020,8 +4483,10 @@ function AIInterview() {
             sx={{
               mb: 3,
               borderRadius: 4,
+
               background:
                 "linear-gradient(135deg,#ffffff,#f5f1ff)",
+
               border:
                 "1px solid #e5ddff",
             }}
@@ -3048,6 +4513,7 @@ function AIInterview() {
                   }}
                 />
 
+
                 <Typography
                   variant="h5"
                   fontWeight={950}
@@ -3056,6 +4522,7 @@ function AIInterview() {
                 </Typography>
 
               </Stack>
+
 
               <Typography
                 sx={{
@@ -3087,8 +4554,10 @@ function AIInterview() {
                       sx={{
                         p: 2,
                         borderRadius: 3,
+
                         background:
                           "rgba(255,255,255,.8)",
+
                         border:
                           "1px solid #e8e2ff",
                       }}
@@ -3105,19 +4574,24 @@ function AIInterview() {
                             minWidth: 30,
                             height: 30,
                             borderRadius: "50%",
+
                             display: "flex",
                             alignItems:
                               "center",
                             justifyContent:
                               "center",
+
                             background:
                               "#7c4dff",
+
                             color: "white",
+
                             fontWeight: 900,
                           }}
                         >
                           {index + 1}
                         </Box>
+
 
                         <Typography
                           sx={{
@@ -3168,6 +4642,7 @@ function AIInterview() {
                 Question-by-Question Results
               </Typography>
 
+
               <Typography
                 sx={{
                   mt: 1,
@@ -3198,6 +4673,7 @@ function AIInterview() {
                       sx={{
                         p: 3,
                         borderRadius: 3,
+
                         border:
                           "1px solid #e5e7eb",
                       }}
@@ -3208,11 +4684,14 @@ function AIInterview() {
                           xs: "column",
                           sm: "row",
                         }}
+
                         justifyContent="space-between"
+
                         alignItems={{
                           xs: "flex-start",
                           sm: "center",
                         }}
+
                         spacing={1.5}
                       >
 
@@ -3222,17 +4701,22 @@ function AIInterview() {
                           Question {index + 1}
                         </Typography>
 
+
                         <Chip
                           label={`${Number(
-                            item.evaluation?.score || 0
+                            item?.evaluation?.score ||
+                            0
                           ).toFixed(0)}/100`}
+
                           color={
                             Number(
-                              item.evaluation?.score || 0
+                              item?.evaluation?.score ||
+                              0
                             ) >= 70
                               ? "success"
                               : "warning"
                           }
+
                           sx={{
                             fontWeight: 900,
                           }}
@@ -3248,7 +4732,12 @@ function AIInterview() {
                           lineHeight: 1.7,
                         }}
                       >
-                        {item.question}
+                        {typeof item.question ===
+                        "string"
+                          ? item.question
+                          : item.question?.question ||
+                            item.question?.text ||
+                            ""}
                       </Typography>
 
 
@@ -3267,7 +4756,8 @@ function AIInterview() {
                         }}
                       >
                         <strong>Your answer:</strong>{" "}
-                        {item.answer || "No answer recorded."}
+                        {item.answer ||
+                          "No answer recorded."}
                       </Typography>
 
 
@@ -3299,7 +4789,7 @@ function AIInterview() {
 
 
           {/* =================================================
-              ACTIONS
+              RESULT ACTIONS
           ================================================= */}
 
           <Stack
@@ -3307,25 +4797,31 @@ function AIInterview() {
               xs: "column",
               sm: "row",
             }}
+
             spacing={2}
+
             justifyContent="center"
           >
 
             <Button
               variant="contained"
               size="large"
+
               startIcon={
                 <Refresh />
               }
+
               onClick={() =>
                 startInterview(
                   interviewType
                 )
               }
+
               disabled={
                 loading ||
                 savingInterview
               }
+
               sx={{
                 px: 4,
                 py: 1.5,
@@ -3340,12 +4836,15 @@ function AIInterview() {
             <Button
               variant="outlined"
               size="large"
+
               startIcon={
                 <ArrowBack />
               }
+
               onClick={
                 resetInterview
               }
+
               sx={{
                 px: 4,
                 py: 1.5,
@@ -3392,10 +4891,23 @@ function AIInterview() {
     questions.length > 0
   ) {
 
-    const question =
+    const currentQuestionData =
       questions[
         currentQuestion
       ];
+
+
+    // ---------------------------------------------------
+    // SUPPORT STRING OR OBJECT QUESTION
+    // ---------------------------------------------------
+
+    const questionText =
+      typeof currentQuestionData ===
+      "string"
+        ? currentQuestionData
+        : currentQuestionData?.question ||
+          currentQuestionData?.text ||
+          "";
 
 
     const progress =
@@ -3406,8 +4918,34 @@ function AIInterview() {
       100;
 
 
-    const isResumeMock =
-      interviewType === "resume";
+    // ---------------------------------------------------
+    // CAMERA STATUS
+    // ---------------------------------------------------
+
+    const currentStream =
+      streamRef.current;
+
+
+    const cameraConnected =
+      !!currentStream &&
+      currentStream
+        .getVideoTracks()
+        .some(
+          (track) =>
+            track.readyState ===
+            "live"
+        );
+
+
+    const microphoneConnected =
+      !!currentStream &&
+      currentStream
+        .getAudioTracks()
+        .some(
+          (track) =>
+            track.readyState ===
+            "live"
+        );
 
 
     return (
@@ -3416,6 +4954,7 @@ function AIInterview() {
         sx={{
           minHeight: "100vh",
           py: 4,
+
           background:
             "linear-gradient(135deg,#eef2ff,#f7f8ff)",
         }}
@@ -3428,6 +4967,7 @@ function AIInterview() {
           <Card
             sx={{
               borderRadius: 5,
+
               boxShadow:
                 "0 25px 60px rgba(0,0,0,.12)",
             }}
@@ -3443,13 +4983,24 @@ function AIInterview() {
             >
 
               {/* =================================================
-                  HEADER
+                  INTERVIEW HEADER
               ================================================= */}
 
               <Stack
-                direction="row"
+                direction={{
+                  xs: "column",
+                  sm: "row",
+                }}
+
                 justifyContent="space-between"
-                alignItems="center"
+
+                alignItems={{
+                  xs: "stretch",
+                  sm: "center",
+                }}
+
+                spacing={2}
+
                 sx={{
                   mb: 2,
                 }}
@@ -3459,6 +5010,7 @@ function AIInterview() {
                   startIcon={
                     <ArrowBack />
                   }
+
                   onClick={
                     resetInterview
                   }
@@ -3471,12 +5023,68 @@ function AIInterview() {
                   icon={
                     <SmartToy />
                   }
+
                   label={
                     getInterviewTypeLabel(
                       interviewType
                     )
                   }
+
                   color="primary"
+                />
+
+              </Stack>
+
+
+              {/* =================================================
+                  DEVICE STATUS
+              ================================================= */}
+
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                useFlexGap
+                sx={{
+                  mb: 2,
+                }}
+              >
+
+                <Chip
+                  label={
+                    cameraConnected
+                      ? "Camera Connected"
+                      : "Camera Disconnected"
+                  }
+
+                  color={
+                    cameraConnected
+                      ? "success"
+                      : "error"
+                  }
+
+                  icon={
+                    <CheckCircle />
+                  }
+                />
+
+
+                <Chip
+                  label={
+                    microphoneConnected
+                      ? "Microphone Connected"
+                      : "Microphone Disconnected"
+                  }
+
+                  color={
+                    microphoneConnected
+                      ? "success"
+                      : "error"
+                  }
+
+                  icon={
+                    <RecordVoiceOver />
+                  }
                 />
 
               </Stack>
@@ -3484,7 +5092,17 @@ function AIInterview() {
 
               <LinearProgress
                 variant="determinate"
-                value={progress}
+
+                value={
+                  Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      progress
+                    )
+                  )
+                }
+
                 sx={{
                   height: 8,
                   borderRadius: 10,
@@ -3499,8 +5117,8 @@ function AIInterview() {
                 mb={3}
               >
                 Question{" "}
-                {currentQuestion + 1}
-                {" "}of{" "}
+                {currentQuestion + 1}{" "}
+                of{" "}
                 {questions.length}
               </Typography>
 
@@ -3514,6 +5132,10 @@ function AIInterview() {
                 spacing={3}
               >
 
+                {/* =================================================
+                    CAMERA
+                ================================================= */}
+
                 <Grid
                   item
                   xs={12}
@@ -3524,8 +5146,11 @@ function AIInterview() {
                     sx={{
                       background:
                         "#101828",
+
                       borderRadius: 4,
-                      overflow: "hidden",
+
+                      overflow:
+                        "hidden",
                     }}
                   >
 
@@ -3535,14 +5160,18 @@ function AIInterview() {
                         ref={
                           attachCamera
                         }
+
                         autoPlay
                         muted
                         playsInline
+
                         style={{
                           width: "100%",
                           height: "380px",
+
                           objectFit:
                             "cover",
+
                           transform:
                             "scaleX(-1)",
                         }}
@@ -3553,15 +5182,23 @@ function AIInterview() {
                       <Box
                         sx={{
                           height: 380,
-                          display: "flex",
+
+                          display:
+                            "flex",
+
                           flexDirection:
                             "column",
+
                           alignItems:
                             "center",
+
                           justifyContent:
                             "center",
+
                           color: "white",
+
                           px: 3,
+
                           textAlign:
                             "center",
                         }}
@@ -3571,22 +5208,21 @@ function AIInterview() {
                           variant="h6"
                           fontWeight={800}
                         >
-                          {isResumeMock
-                            ? "Camera unavailable"
-                            : "Audio / Text Practice"}
+                          Camera unavailable
                         </Typography>
+
 
                         <Typography
                           variant="body2"
                           sx={{
                             mt: 1,
+
                             color:
                               "rgba(255,255,255,.65)",
                           }}
                         >
-                          {isResumeMock
-                            ? "The resume mock interview uses camera and microphone."
-                            : "Camera is optional for this practice mode."}
+                          Camera and microphone access
+                          are required for the interview.
                         </Typography>
 
                       </Box>
@@ -3613,13 +5249,20 @@ function AIInterview() {
                     sx={{
                       height: "100%",
                       minHeight: 380,
+
                       p: 4,
+
                       borderRadius: 4,
+
                       background:
                         "linear-gradient(135deg,#eef4ff,#f3edff)",
-                      display: "flex",
+
+                      display:
+                        "flex",
+
                       flexDirection:
                         "column",
+
                       justifyContent:
                         "center",
                     }}
@@ -3636,25 +5279,33 @@ function AIInterview() {
                     <Typography
                       variant="h4"
                       fontWeight={900}
+
                       sx={{
                         mt: 2,
                         lineHeight: 1.4,
                       }}
                     >
-                      {question}
+                      {questionText}
                     </Typography>
 
 
                     <Button
                       variant="outlined"
+
                       startIcon={
                         <RecordVoiceOver />
                       }
+
                       onClick={() =>
                         speakQuestion(
-                          question
+                          questionText
                         )
                       }
+
+                      disabled={
+                        !questionText.trim()
+                      }
+
                       sx={{
                         mt: 3,
                       }}
@@ -3693,25 +5344,36 @@ function AIInterview() {
 
                   <textarea
                     value={answer}
+
                     onChange={(event) =>
                       setAnswer(
                         event.target.value
                       )
                     }
+
                     placeholder="Speak or type your answer..."
+
                     style={{
                       width: "100%",
                       minHeight: 160,
+
                       marginTop: 16,
+
                       padding: 16,
+
                       borderRadius: 12,
+
                       border:
                         "1px solid #d0d5dd",
+
                       fontSize: 16,
+
                       fontFamily:
                         "inherit",
+
                       resize:
                         "vertical",
+
                       boxSizing:
                         "border-box",
                     }}
@@ -3723,44 +5385,67 @@ function AIInterview() {
                       xs: "column",
                       sm: "row",
                     }}
+
                     spacing={2}
+
                     sx={{
                       mt: 2,
                     }}
                   >
 
+                    {/* =================================================
+                        SPEAK ANSWER
+                    ================================================= */}
+
                     <Button
                       fullWidth
+
                       variant={
                         listening
                           ? "contained"
                           : "outlined"
                       }
+
                       color={
                         listening
                           ? "error"
                           : "primary"
                       }
+
                       onClick={
                         listening
                           ? stopListening
                           : startListening
                       }
+
+                      disabled={
+                        !microphoneConnected
+                      }
                     >
+
                       {listening
                         ? "Stop Speaking"
                         : "Start Speaking"}
+
                     </Button>
 
+
+                    {/* =================================================
+                        EVALUATE
+                    ================================================= */}
 
                     <Button
                       fullWidth
                       variant="contained"
+
                       onClick={
                         submitAnswer
                       }
+
                       disabled={
-                        evaluationLoading
+                        evaluationLoading ||
+                        !cameraConnected ||
+                        !microphoneConnected
                       }
                     >
 
@@ -3796,6 +5481,7 @@ function AIInterview() {
                   sx={{
                     mt: 3,
                     borderRadius: 4,
+
                     background:
                       "#f8fff9",
                   }}
@@ -3815,7 +5501,10 @@ function AIInterview() {
                       sx={{
                         fontSize: 32,
                         fontWeight: 950,
-                        color: "#1976d2",
+
+                        color:
+                          "#1976d2",
+
                         mt: 2,
                       }}
                     >
@@ -3837,6 +5526,10 @@ function AIInterview() {
 
                     )}
 
+
+                    {/* =================================================
+                        FEEDBACK CARDS
+                    ================================================= */}
 
                     <Grid
                       container
@@ -3881,6 +5574,7 @@ function AIInterview() {
                                 p: 2,
                                 height: "100%",
                                 borderRadius: 3,
+
                                 background:
                                   item[2],
                               }}
@@ -3906,6 +5600,7 @@ function AIInterview() {
                                     <Typography
                                       key={index}
                                       variant="body2"
+
                                       sx={{
                                         mt: 1,
                                         lineHeight: 1.6,
@@ -3921,6 +5616,7 @@ function AIInterview() {
 
                                 <Typography
                                   variant="body2"
+
                                   sx={{
                                     mt: 1,
                                   }}
@@ -3948,14 +5644,18 @@ function AIInterview() {
                     {Array.isArray(
                       feedback.better_answer_guidance
                     ) &&
-                      feedback.better_answer_guidance.length > 0 && (
+                      feedback
+                        .better_answer_guidance
+                        .length > 0 && (
 
                         <Paper
                           elevation={0}
+
                           sx={{
                             mt: 2,
                             p: 2.5,
                             borderRadius: 3,
+
                             background:
                               "#f3efff",
                           }}
@@ -3969,44 +5669,57 @@ function AIInterview() {
                           </Typography>
 
 
-                          {feedback.better_answer_guidance.map(
-                            (
-                              point,
-                              index
-                            ) => (
+                          {feedback
+                            .better_answer_guidance
+                            .map(
+                              (
+                                point,
+                                index
+                              ) => (
 
-                              <Typography
-                                key={index}
-                                variant="body2"
-                                sx={{
-                                  mt: 1,
-                                  lineHeight: 1.7,
-                                }}
-                              >
-                                {index + 1}. {point}
-                              </Typography>
+                                <Typography
+                                  key={index}
+                                  variant="body2"
 
-                            )
-                          )}
+                                  sx={{
+                                    mt: 1,
+                                    lineHeight: 1.7,
+                                  }}
+                                >
+                                  {index + 1}.{" "}
+                                  {point}
+                                </Typography>
+
+                              )
+                            )}
 
                         </Paper>
 
-                    )}
+                      )}
 
 
                     {/* =================================================
-                        NEXT
+                        NEXT QUESTION / FINISH
                     ================================================= */}
 
                     <Button
                       fullWidth
                       variant="contained"
+
                       endIcon={
                         <ArrowForward />
                       }
+
                       onClick={
                         nextQuestion
                       }
+
+                      disabled={
+                        !cameraConnected ||
+                        !microphoneConnected ||
+                        savingInterview
+                      }
+
                       sx={{
                         mt: 3,
                         py: 1.5,
@@ -4041,9 +5754,17 @@ function AIInterview() {
   }
 
 
+  // =====================================================
+  // FALLBACK
+  // =====================================================
+
   return null;
 
 }
 
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 export default AIInterview;

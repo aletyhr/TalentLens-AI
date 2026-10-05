@@ -1,4 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 
@@ -15,47 +20,89 @@ import NotFound from "./pages/NotFound";
 // AI Interview
 import AIInterview from "./components/AIInterview";
 
+// Analytics
+import Analytics from "./components/Analytics";
+
+
 // ==========================================
 // PROTECTED ROUTE
 // ==========================================
 
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("token");
+
+  const token =
+    localStorage.getItem("token");
+
 
   // If user is not logged in
   if (!token) {
-    return <Navigate to="/login" replace />;
+
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+
   }
+
 
   // If user is logged in
   return children;
 }
+
 
 // ==========================================
 // APP
 // ==========================================
 
 function App() {
+
   return (
+
     <BrowserRouter>
+
       {/* Navbar */}
+
       <Navbar />
 
+
       <Routes>
+
 
         {/* ==============================
             PUBLIC ROUTES
         ============================== */}
 
-        <Route path="/" element={<Home />} />
 
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <Home />
+          }
+        />
 
-        <Route path="/register" element={<Register />} />
+
+        <Route
+          path="/login"
+          element={
+            <Login />
+          }
+        />
+
+
+        <Route
+          path="/register"
+          element={
+            <Register />
+          }
+        />
+
 
         {/* ==============================
             PROTECTED ROUTES
         ============================== */}
+
 
         <Route
           path="/dashboard"
@@ -66,6 +113,7 @@ function App() {
           }
         />
 
+
         <Route
           path="/history"
           element={
@@ -74,6 +122,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+
 
         <Route
           path="/profile"
@@ -84,6 +133,7 @@ function App() {
           }
         />
 
+
         <Route
           path="/settings"
           element={
@@ -93,9 +143,11 @@ function App() {
           }
         />
 
+
         {/* ==============================
             AI MOCK INTERVIEW
         ============================== */}
+
 
         <Route
           path="/ai-interview"
@@ -106,15 +158,42 @@ function App() {
           }
         />
 
+
+        {/* ==============================
+            ANALYTICS
+        ============================== */}
+
+
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
+
+
         {/* ==============================
             PAGE NOT FOUND
         ============================== */}
 
-        <Route path="*" element={<NotFound />} />
+
+        <Route
+          path="*"
+          element={
+            <NotFound />
+          }
+        />
+
 
       </Routes>
+
     </BrowserRouter>
+
   );
+
 }
+
 
 export default App;

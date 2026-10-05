@@ -1,37 +1,59 @@
 from flask import Flask, request, jsonify
+
 from flask_cors import CORS
+
 from flask_jwt_extended import JWTManager
+
 from werkzeug.utils import secure_filename
+
 from dotenv import load_dotenv
 
 import os
+
 import uuid
+
 import re
 
 load_dotenv()
 
 from config.extensions import limiter
+
 from models.user import bcrypt
 
 from routes.auth import auth
+
 from routes.resume import resume
+
 from routes.mock_interview import mock_interview
+
 from routes.job_match import job_match
+
 from routes.career_readiness import career_readiness
+
+from routes.analytics import analytics
 
 from utils.pdf_reader import extract_text
 
 from ai.skill_extractor import extract_skills
+
 from ai.education_extractor import extract_education
+
 from ai.experience_extractor import extract_experience
+
 from ai.contact_extractor import extract_contact_info
 
 from ai.ats_calculator import calculate_ats_score
+
 from ai.semantic_matcher import calculate_semantic_score
+
 from ai.resume_grader import calculate_resume_grade
+
 from ai.job_role_predictor import predict_job_role
+
 from ai.suggestion_engine import generate_suggestions
+
 from ai.interview_questions import get_interview_questions
+
 from ai.resume_insights import generate_resume_insights
 
 
@@ -54,7 +76,9 @@ CORS(
         r"/*": {
             "origins": [
                 "http://localhost:3000",
-                "http://127.0.0.1:3000"
+                "http://127.0.0.1:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3001"
             ]
         }
     }
@@ -106,10 +130,16 @@ bcrypt.init_app(app)
 # =========================================================
 
 app.register_blueprint(auth)
+
 app.register_blueprint(resume)
+
 app.register_blueprint(mock_interview)
+
 app.register_blueprint(job_match)
+
 app.register_blueprint(career_readiness)
+
+app.register_blueprint(analytics)
 
 
 # =========================================================
@@ -126,7 +156,6 @@ os.makedirs(
     UPLOAD_FOLDER,
     exist_ok=True
 )
-
 
 ALLOWED_EXTENSIONS = {
     "pdf"
@@ -156,7 +185,9 @@ def allowed_file(filename):
 def is_likely_resume(text):
 
     if not text:
+
         return False
+
 
     normalized_text = re.sub(
         r"\s+",
@@ -164,74 +195,131 @@ def is_likely_resume(text):
         text.lower()
     ).strip()
 
+
     if len(normalized_text) < 100:
+
         return False
 
+
     resume_keywords = [
+
         "resume",
+
         "curriculum vitae",
+
         "cv",
+
         "education",
+
         "qualification",
+
         "academic",
+
         "experience",
+
         "work experience",
+
         "employment",
+
         "professional experience",
+
         "skills",
+
         "technical skills",
+
         "skill",
+
         "project",
+
         "projects",
+
         "internship",
+
         "internships",
+
         "certification",
+
         "certifications",
+
         "achievement",
+
         "achievements",
+
         "objective",
+
         "career objective",
+
         "profile",
+
         "summary",
+
         "linkedin",
+
         "github",
+
         "developer",
+
         "engineer",
+
         "student",
+
         "analyst",
+
         "analytics"
+
     ]
 
+
     matched_keywords = 0
+
 
     for keyword in resume_keywords:
 
         if keyword in normalized_text:
+
             matched_keywords += 1
 
+
     if matched_keywords < 3:
+
         return False
 
+
     section_keywords = [
+
         "education",
+
         "experience",
+
         "skills",
+
         "projects",
+
         "certifications",
+
         "objective",
+
         "summary",
+
         "internship"
+
     ]
 
+
     section_matches = 0
+
 
     for section in section_keywords:
 
         if section in normalized_text:
+
             section_matches += 1
 
+
     if section_matches < 2:
+
         return False
+
 
     return True
 
@@ -241,12 +329,16 @@ def is_likely_resume(text):
 # =========================================================
 
 @app.route("/")
+
 @limiter.limit("30 per minute")
+
 def home():
 
     return jsonify({
+
         "message":
             "TalentLens AI Backend Running Successfully!"
+
     })
 
 
@@ -258,7 +350,9 @@ def home():
     "/upload",
     methods=["POST"]
 )
+
 @limiter.limit("10 per minute")
+
 def upload_resume():
 
     # -----------------------------------------------------
@@ -268,15 +362,21 @@ def upload_resume():
     if "resume" not in request.files:
 
         return jsonify({
+
             "message": "No file uploaded"
+
         }), 400
 
+
     file = request.files["resume"]
+
 
     if file.filename == "":
 
         return jsonify({
+
             "message": "No file selected"
+
         }), 400
 
 
@@ -287,8 +387,10 @@ def upload_resume():
     if not allowed_file(file.filename):
 
         return jsonify({
+
             "message":
                 "Only PDF files are allowed."
+
         }), 400
 
 
@@ -300,11 +402,14 @@ def upload_resume():
 
     file.seek(0)
 
+
     if file_header != b"%PDF-":
 
         return jsonify({
+
             "message":
                 "Invalid PDF file."
+
         }), 400
 
 
@@ -316,11 +421,14 @@ def upload_resume():
         file.filename
     )
 
+
     if not original_filename:
 
         return jsonify({
+
             "message":
                 "Invalid filename."
+
         }), 400
 
 
@@ -332,6 +440,7 @@ def upload_resume():
         str(uuid.uuid4())
         + ".pdf"
     )
+
 
     filepath = os.path.join(
         app.config["UPLOAD_FOLDER"],
@@ -347,6 +456,7 @@ def upload_resume():
 
         file.save(filepath)
 
+
     except Exception as error:
 
         print(
@@ -354,9 +464,12 @@ def upload_resume():
             error
         )
 
+
         return jsonify({
+
             "message":
                 "Unable to save uploaded file."
+
         }), 500
 
 
@@ -370,12 +483,14 @@ def upload_resume():
             filepath
         )
 
+
     except Exception as error:
 
         print(
             "PDF extraction error:",
             error
         )
+
 
         try:
 
@@ -384,11 +499,15 @@ def upload_resume():
                 os.remove(filepath)
 
         except Exception:
+
             pass
 
+
         return jsonify({
+
             "message":
                 "Unable to read the uploaded PDF."
+
         }), 400
 
 
@@ -407,11 +526,15 @@ def upload_resume():
                 os.remove(filepath)
 
         except Exception:
+
             pass
 
+
         return jsonify({
+
             "message":
                 "This PDF does not appear to be a resume. Please upload a valid resume."
+
         }), 400
 
 
@@ -425,17 +548,21 @@ def upload_resume():
             resume_text
         )
 
+
         education = extract_education(
             resume_text
         )
+
 
         experience = extract_experience(
             resume_text
         )
 
+
         contact = extract_contact_info(
             resume_text
         )
+
 
     except Exception as error:
 
@@ -444,6 +571,7 @@ def upload_resume():
             error
         )
 
+
         try:
 
             if os.path.exists(filepath):
@@ -451,11 +579,15 @@ def upload_resume():
                 os.remove(filepath)
 
         except Exception:
+
             pass
 
+
         return jsonify({
+
             "message":
                 "Unable to analyze resume information."
+
         }), 500
 
 
@@ -468,15 +600,23 @@ def upload_resume():
         ""
     )
 
+
     if job_description.strip() == "":
 
         job_description = """
+
         Looking for a Python Developer with
+
         Flask, React, Machine Learning,
+
         NLP, MongoDB,
+
         HTML, CSS,
+
         JavaScript,
+
         SQL and Git.
+
         """
 
 
@@ -495,6 +635,7 @@ def upload_resume():
             job_description
         )
 
+
     except Exception as error:
 
         print(
@@ -502,9 +643,12 @@ def upload_resume():
             error
         )
 
+
         return jsonify({
+
             "message":
                 "ATS analysis failed."
+
         }), 500
 
 
@@ -515,11 +659,14 @@ def upload_resume():
     try:
 
         semantic_score = float(
+
             calculate_semantic_score(
                 resume_text,
                 job_description
             )
+
         )
+
 
     except Exception as error:
 
@@ -528,9 +675,12 @@ def upload_resume():
             error
         )
 
+
         return jsonify({
+
             "message":
                 "Semantic analysis failed."
+
         }), 500
 
 
@@ -551,9 +701,11 @@ def upload_resume():
             education
         )
 
+
         overall_score = float(
             overall_score
         )
+
 
     except Exception as error:
 
@@ -562,9 +714,12 @@ def upload_resume():
             error
         )
 
+
         return jsonify({
+
             "message":
                 "Resume grading failed."
+
         }), 500
 
 
@@ -576,13 +731,19 @@ def upload_resume():
 
     role_evidence = []
 
+
     try:
 
         role_prediction = predict_job_role(
+
             skills=skills,
+
             education=education,
+
             experience=experience,
+
             resume_text=resume_text
+
         )
 
 
@@ -600,10 +761,12 @@ def upload_resume():
                 "Not predicted"
             )
 
+
             all_evidence = role_prediction.get(
                 "evidence",
                 {}
             )
+
 
             if isinstance(
                 all_evidence,
@@ -626,12 +789,14 @@ def upload_resume():
                 role_prediction
             )
 
+
     except Exception as error:
 
         print(
             "Role prediction error:",
             error
         )
+
 
         predicted_role = "Not predicted"
 
@@ -645,10 +810,13 @@ def upload_resume():
     try:
 
         interview_questions = (
+
             get_interview_questions(
                 predicted_role
             )
+
         )
+
 
     except Exception as error:
 
@@ -656,6 +824,7 @@ def upload_resume():
             "Interview question error:",
             error
         )
+
 
         interview_questions = []
 
@@ -667,9 +836,13 @@ def upload_resume():
     try:
 
         suggestions = generate_suggestions(
+
             ats_score,
+
             missing_skills
+
         )
+
 
     except Exception as error:
 
@@ -677,6 +850,7 @@ def upload_resume():
             "Suggestion error:",
             error
         )
+
 
         suggestions = []
 
@@ -688,13 +862,21 @@ def upload_resume():
     try:
 
         resume_insights = (
+
             generate_resume_insights(
+
                 skills,
+
                 ats_score,
+
                 education,
+
                 experience
+
             )
+
         )
+
 
     except Exception as error:
 
@@ -702,6 +884,7 @@ def upload_resume():
             "Resume insights error:",
             error
         )
+
 
         resume_insights = {}
 
@@ -765,6 +948,7 @@ def upload_resume():
 
         "resume_insights":
             resume_insights
+
     })
 
 
@@ -773,6 +957,7 @@ def upload_resume():
 # =========================================================
 
 @app.errorhandler(413)
+
 def request_entity_too_large(error):
 
     return jsonify({
@@ -788,6 +973,7 @@ def request_entity_too_large(error):
 # =========================================================
 
 @app.errorhandler(500)
+
 def internal_server_error(error):
 
     return jsonify({
@@ -805,14 +991,21 @@ def internal_server_error(error):
 if __name__ == "__main__":
 
     debug_mode = (
+
         os.getenv(
             "FLASK_DEBUG",
             "false"
         ).lower()
+
         == "true"
+
     )
 
+
     app.run(
+
         debug=debug_mode,
+
         use_reloader=False
+
     )

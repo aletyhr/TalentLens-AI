@@ -58,6 +58,7 @@ function Dashboard({
   const [readinessLoading, setReadinessLoading] = useState(true);
   const [readinessError, setReadinessError] = useState("");
 
+
   useEffect(() => {
     const loadCareerReadiness = async () => {
       try {
@@ -153,12 +154,96 @@ function Dashboard({
     );
 
 
+  const readinessLevel =
+    careerReadiness?.readiness_level ||
+    "Not Started";
+
+
+  // =========================================================
+  // PROFILE CHECKS
+  // =========================================================
+
+  const profileChecks = [
+    {
+      label: "Skills",
+      complete:
+        Array.isArray(skills) &&
+        skills.length > 0,
+    },
+
+    {
+      label: "Education",
+      complete:
+        Array.isArray(education) &&
+        education.length > 0,
+    },
+
+    {
+      label: "Experience",
+      complete:
+        Array.isArray(experience) &&
+        experience.length > 0,
+    },
+
+    {
+      label: "Career Role",
+      complete:
+        Boolean(
+          predictedRole &&
+          predictedRole !== "Not predicted" &&
+          String(predictedRole).trim()
+        ),
+    },
+
+    {
+      label: "Resume Insights",
+      complete:
+        resumeInsights &&
+        typeof resumeInsights === "object" &&
+        Object.keys(resumeInsights).length > 0,
+    },
+  ];
+
+
+  const completedProfileItems =
+    profileChecks.filter(
+      (item) => item.complete
+    ).length;
+
+
+  // =========================================================
+  // READINESS COLOR
+  // =========================================================
+
+  const getReadinessColor = () => {
+
+    if (safeCareerReadiness >= 85) {
+      return "#16a34a";
+    }
+
+    if (safeCareerReadiness >= 70) {
+      return "#1976d2";
+    }
+
+    if (safeCareerReadiness >= 55) {
+      return "#f59e0b";
+    }
+
+    return "#ef4444";
+  };
+
+
+  const readinessColor =
+    getReadinessColor();
+
+
   // =========================================================
   // COMMON CARD STYLE
   // =========================================================
 
   const cardStyle = {
     borderRadius: 5,
+
     background:
       "rgba(255,255,255,0.97)",
 
@@ -241,6 +326,7 @@ function Dashboard({
           color="text.secondary"
           sx={{
             fontSize: ".95rem",
+            lineHeight: 1.6,
           }}
         >
           {subtitle}
@@ -252,38 +338,13 @@ function Dashboard({
 
 
   // =========================================================
-  // READINESS LEVEL
+  // OPEN INTERVIEW CENTER
   // =========================================================
 
-  const readinessLevel =
-    careerReadiness?.readiness_level ||
-    "Not Started";
-
-
-  // =========================================================
-  // READINESS COLOR
-  // =========================================================
-
-  const getReadinessColor = () => {
-
-    if (safeCareerReadiness >= 85) {
-      return "#16a34a";
-    }
-
-    if (safeCareerReadiness >= 70) {
-      return "#1976d2";
-    }
-
-    if (safeCareerReadiness >= 55) {
-      return "#f59e0b";
-    }
-
-    return "#ef4444";
+  const openInterviewCenter = () => {
+    window.location.href =
+      "/ai-interview";
   };
-
-
-  const readinessColor =
-    getReadinessColor();
 
 
   // =========================================================
@@ -306,9 +367,7 @@ function Dashboard({
       }}
     >
 
-      <Container
-        maxWidth="lg"
-      >
+      <Container maxWidth="lg">
 
 
         {/* ================================================= */}
@@ -403,21 +462,21 @@ function Dashboard({
                     lineHeight: 1.7,
                   }}
                 >
-                  Understand your resume, identify your
-                  career direction, improve your profile
-                  and prepare for interviews.
+                  Understand your resume, measure your
+                  career readiness, identify areas to improve,
+                  and practice interviews with AI.
                 </Typography>
 
               </Box>
 
 
-              {/* ATS SUPPORTING SCORE */}
+              {/* ATS SCORE */}
 
               <Box
                 sx={{
                   minWidth: {
                     xs: "100%",
-                    md: 180,
+                    md: 190,
                   },
 
                   p: 2.5,
@@ -480,7 +539,7 @@ function Dashboard({
 
 
         {/* ================================================= */}
-        {/* CAREER READINESS MAIN FEATURE */}
+        {/* CAREER READINESS */}
         {/* ================================================= */}
 
         <Card
@@ -548,25 +607,23 @@ function Dashboard({
                 <Typography
                   sx={{
                     opacity: .78,
-                    maxWidth: 650,
+                    maxWidth: 680,
                     lineHeight: 1.7,
                   }}
                 >
-                  A preparation-focused view of how ready
-                  your current resume, profile and interview
-                  preparation are.
+                  Your overall preparation level based on
+                  your resume, interview performance and
+                  profile completeness.
                 </Typography>
 
               </Box>
 
 
-              {/* MAIN SCORE */}
-
               <Box
                 sx={{
                   minWidth: {
                     xs: "100%",
-                    md: 220,
+                    md: 230,
                   },
 
                   textAlign: "center",
@@ -602,7 +659,7 @@ function Dashboard({
                         letterSpacing: 1,
                       }}
                     >
-                      READINESS
+                      OVERALL READINESS
                     </Typography>
 
 
@@ -649,6 +706,7 @@ function Dashboard({
 
 
             {readinessError && (
+
               <Alert
                 severity="warning"
                 sx={{
@@ -657,10 +715,12 @@ function Dashboard({
               >
                 {readinessError}
               </Alert>
+
             )}
 
 
             {!readinessLoading && (
+
               <>
 
                 {/* MAIN PROGRESS */}
@@ -689,7 +749,9 @@ function Dashboard({
                 </Box>
 
 
+                {/* ================================================= */}
                 {/* READINESS COMPONENTS */}
+                {/* ================================================= */}
 
                 <Grid
                   container
@@ -720,46 +782,66 @@ function Dashboard({
                           "1px solid rgba(255,255,255,.10)",
 
                         color: "white",
+
+                        height: "100%",
                       }}
                     >
 
-                      <Typography
-                        sx={{
-                          opacity: .7,
-                          fontSize: ".85rem",
-                        }}
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
                       >
-                        Resume Readiness
-                      </Typography>
+
+                        <DescriptionIcon />
+
+                        <Typography
+                          fontWeight={900}
+                        >
+                          Resume Readiness
+                        </Typography>
+
+                      </Stack>
 
 
                       <Typography
                         sx={{
-                          fontSize: "2rem",
-                          fontWeight: 900,
-                          mt: .5,
+                          fontSize: "2.3rem",
+                          fontWeight: 950,
+                          mt: 1,
                         }}
                       >
-                        {safeResumeReadiness}%
+                        {safeResumeReadiness}
                       </Typography>
 
 
                       <LinearProgress
                         variant="determinate"
-                        value={safeResumeReadiness}
+                        value={
+                          safeResumeReadiness
+                        }
                         sx={{
-                          mt: 1.5,
-                          height: 7,
+                          mt: 1,
+                          height: 8,
                           borderRadius: 5,
 
                           background:
                             "rgba(255,255,255,.10)",
-
-                          "& .MuiLinearProgress-bar": {
-                            background: "#42a5f5",
-                          },
                         }}
                       />
+
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 1.5,
+                          opacity: .7,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        Measures the current strength
+                        of your resume.
+                      </Typography>
 
                     </Paper>
 
@@ -787,90 +869,73 @@ function Dashboard({
                           "1px solid rgba(255,255,255,.10)",
 
                         color: "white",
+
+                        height: "100%",
                       }}
                     >
 
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                      >
+
+                        <RecordVoiceOverIcon />
+
+                        <Typography
+                          fontWeight={900}
+                        >
+                          Interview Readiness
+                        </Typography>
+
+                      </Stack>
+
+
                       <Typography
                         sx={{
-                          opacity: .7,
-                          fontSize: ".85rem",
+                          fontSize: "2.3rem",
+                          fontWeight: 950,
+                          mt: 1,
                         }}
                       >
-                        Interview Readiness
+                        {hasInterview
+                          ? safeInterviewReadiness
+                          : "Not Started"}
                       </Typography>
 
 
-                      {hasInterview ? (
+                      {hasInterview && (
 
-                        <>
+                        <LinearProgress
+                          variant="determinate"
+                          value={
+                            safeInterviewReadiness
+                          }
+                          sx={{
+                            mt: 1,
+                            height: 8,
+                            borderRadius: 5,
 
-                          <Typography
-                            sx={{
-                              fontSize: "2rem",
-                              fontWeight: 900,
-                              mt: .5,
-                            }}
-                          >
-                            {safeInterviewReadiness}%
-                          </Typography>
-
-
-                          <LinearProgress
-                            variant="determinate"
-                            value={
-                              safeInterviewReadiness
-                            }
-                            sx={{
-                              mt: 1.5,
-                              height: 7,
-                              borderRadius: 5,
-
-                              background:
-                                "rgba(255,255,255,.10)",
-
-                              "& .MuiLinearProgress-bar": {
-                                background: "#b388ff",
-                              },
-                            }}
-                          />
-
-                        </>
-
-                      ) : (
-
-                        <>
-
-                          <Typography
-                            sx={{
-                              fontSize: {
-                                xs: "1.5rem",
-                                md: "1.7rem",
-                              },
-
-                              fontWeight: 900,
-                              mt: .8,
-                            }}
-                          >
-                            Not assessed yet
-                          </Typography>
-
-
-                          <Typography
-                            sx={{
-                              mt: 1,
-                              fontSize: ".82rem",
-                              opacity: .65,
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            Complete a mock interview
-                            to measure your interview
-                            readiness.
-                          </Typography>
-
-                        </>
+                            background:
+                              "rgba(255,255,255,.10)",
+                          }}
+                        />
 
                       )}
+
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 1.5,
+                          opacity: .7,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {hasInterview
+                          ? "Based on your interview performance."
+                          : "Complete an AI interview to measure this area."}
+                      </Typography>
 
                     </Paper>
 
@@ -898,24 +963,33 @@ function Dashboard({
                           "1px solid rgba(255,255,255,.10)",
 
                         color: "white",
+
+                        height: "100%",
                       }}
                     >
 
-                      <Typography
-                        sx={{
-                          opacity: .7,
-                          fontSize: ".85rem",
-                        }}
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
                       >
-                        Profile Completeness
-                      </Typography>
+
+                        <AssignmentTurnedInIcon />
+
+                        <Typography
+                          fontWeight={900}
+                        >
+                          Profile Completeness
+                        </Typography>
+
+                      </Stack>
 
 
                       <Typography
                         sx={{
-                          fontSize: "2rem",
-                          fontWeight: 900,
-                          mt: .5,
+                          fontSize: "2.3rem",
+                          fontWeight: 950,
+                          mt: 1,
                         }}
                       >
                         {safeProfileCompleteness}%
@@ -928,27 +1002,172 @@ function Dashboard({
                           safeProfileCompleteness
                         }
                         sx={{
-                          mt: 1.5,
-                          height: 7,
+                          mt: 1,
+                          height: 8,
                           borderRadius: 5,
 
                           background:
                             "rgba(255,255,255,.10)",
-
-                          "& .MuiLinearProgress-bar": {
-                            background: "#26a69a",
-                          },
                         }}
                       />
+
+
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 1.5,
+                          opacity: .7,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {completedProfileItems}
+                        /
+                        {profileChecks.length}
+                        {" "}
+                        important areas detected.
+                      </Typography>
 
                     </Paper>
 
                   </Grid>
 
                 </Grid>
+                                {/* ================================================= */}
+                {/* SCORE EXPLANATION */}
+                {/* ================================================= */}
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    mt: 3,
+                    p: 2.5,
+                    borderRadius: 4,
+
+                    background:
+                      "rgba(255,255,255,.06)",
+
+                    border:
+                      "1px solid rgba(255,255,255,.08)",
+
+                    color: "white",
+                  }}
+                >
+
+                  <Typography
+                    fontWeight={900}
+                    sx={{
+                      mb: 1,
+                    }}
+                  >
+                    How your Career Readiness is calculated
+                  </Typography>
 
 
+                  <Typography
+                    sx={{
+                      opacity: .7,
+                      fontSize: ".88rem",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {hasInterview
+                      ? "Because you have completed an interview, your Career Readiness combines Resume Readiness, Interview Readiness and Profile Completeness."
+                      : "Until you complete an interview, your Career Readiness is based on Resume Readiness and Profile Completeness."}
+                  </Typography>
+
+
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{
+                      mt: 2,
+                    }}
+                  >
+
+                    {hasInterview ? (
+
+                      <>
+
+                        <Chip
+                          label="Resume 50%"
+                          sx={{
+                            color: "white",
+
+                            background:
+                              "rgba(66,165,245,.18)",
+
+                            fontWeight: 700,
+                          }}
+                        />
+
+                        <Chip
+                          label="Interview 35%"
+                          sx={{
+                            color: "white",
+
+                            background:
+                              "rgba(179,136,255,.18)",
+
+                            fontWeight: 700,
+                          }}
+                        />
+
+                        <Chip
+                          label="Profile 15%"
+                          sx={{
+                            color: "white",
+
+                            background:
+                              "rgba(38,166,154,.18)",
+
+                            fontWeight: 700,
+                          }}
+                        />
+
+                      </>
+
+                    ) : (
+
+                      <>
+
+                        <Chip
+                          label="Resume 70%"
+                          sx={{
+                            color: "white",
+
+                            background:
+                              "rgba(66,165,245,.18)",
+
+                            fontWeight: 700,
+                          }}
+                        />
+
+                        <Chip
+                          label="Profile 30%"
+                          sx={{
+                            color: "white",
+
+                            background:
+                              "rgba(38,166,154,.18)",
+
+                            fontWeight: 700,
+                          }}
+                        />
+
+                      </>
+
+                    )}
+
+                  </Stack>
+
+                </Paper>
+
+
+                {/* ================================================= */}
                 {/* STRENGTHS / IMPROVEMENTS / NEXT ACTION */}
+                {/* ================================================= */}
 
                 <Grid
                   container
@@ -996,61 +1215,55 @@ function Dashboard({
                       {Array.isArray(
                         careerReadiness?.strengths
                       ) &&
-                      careerReadiness.strengths.length >
-                        0 ? (
+                      careerReadiness.strengths.length > 0 ? (
 
                         <Stack spacing={1}>
 
-                          {careerReadiness.strengths
-                            .slice(0, 4)
-                            .map(
-                              (
-                                item,
-                                index
-                              ) => (
+                          {careerReadiness.strengths.map(
+                            (item, index) => (
 
-                                <Stack
-                                  direction="row"
-                                  spacing={1}
-                                  key={index}
+                              <Stack
+                                key={index}
+                                direction="row"
+                                spacing={1}
+                                alignItems="flex-start"
+                              >
+
+                                <CheckCircleIcon
+                                  sx={{
+                                    fontSize: 19,
+                                    mt: .2,
+                                  }}
+                                />
+
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    opacity: .8,
+                                    lineHeight: 1.6,
+                                  }}
                                 >
+                                  {item}
+                                </Typography>
 
-                                  <CheckCircleIcon
-                                    sx={{
-                                      fontSize: 19,
-                                      color:
-                                        "#66bb6a",
-                                    }}
-                                  />
+                              </Stack>
 
-                                  <Typography
-                                    sx={{
-                                      fontSize:
-                                        ".9rem",
-                                      opacity: .82,
-                                    }}
-                                  >
-                                    {item}
-                                  </Typography>
-
-                                </Stack>
-
-                              )
-                            )}
+                            )
+                          )}
 
                         </Stack>
 
                       ) : (
 
                         <Typography
+                          variant="body2"
                           sx={{
                             opacity: .65,
-                            fontSize: ".9rem",
+                            lineHeight: 1.6,
                           }}
                         >
-                          Strengths will appear
-                          after your resume is
-                          analyzed.
+                          Complete your resume analysis
+                          to identify your strengths.
                         </Typography>
 
                       )}
@@ -1091,67 +1304,62 @@ function Dashboard({
                           mb: 1.5,
                         }}
                       >
-                        What to Improve
+                        Focus Areas
                       </Typography>
 
 
                       {Array.isArray(
                         careerReadiness?.improvements
                       ) &&
-                      careerReadiness.improvements.length >
-                        0 ? (
+                      careerReadiness.improvements.length > 0 ? (
 
                         <Stack spacing={1}>
 
-                          {careerReadiness.improvements
-                            .slice(0, 4)
-                            .map(
-                              (
-                                item,
-                                index
-                              ) => (
+                          {careerReadiness.improvements.map(
+                            (item, index) => (
 
-                                <Stack
-                                  direction="row"
-                                  spacing={1}
-                                  key={index}
+                              <Stack
+                                key={index}
+                                direction="row"
+                                spacing={1}
+                                alignItems="flex-start"
+                              >
+
+                                <TrendingUpIcon
+                                  sx={{
+                                    fontSize: 19,
+                                    mt: .2,
+                                  }}
+                                />
+
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    opacity: .8,
+                                    lineHeight: 1.6,
+                                  }}
                                 >
+                                  {item}
+                                </Typography>
 
-                                  <LightbulbIcon
-                                    sx={{
-                                      fontSize: 19,
-                                      color:
-                                        "#ffca28",
-                                    }}
-                                  />
+                              </Stack>
 
-                                  <Typography
-                                    sx={{
-                                      fontSize:
-                                        ".9rem",
-                                      opacity: .82,
-                                    }}
-                                  >
-                                    {item}
-                                  </Typography>
-
-                                </Stack>
-
-                              )
-                            )}
+                            )
+                          )}
 
                         </Stack>
 
                       ) : (
 
                         <Typography
+                          variant="body2"
                           sx={{
                             opacity: .65,
-                            fontSize: ".9rem",
+                            lineHeight: 1.6,
                           }}
                         >
-                          Your improvement areas
-                          will appear here.
+                          Your improvement areas will
+                          appear here.
                         </Typography>
 
                       )}
@@ -1192,19 +1400,19 @@ function Dashboard({
                           mb: 1.5,
                         }}
                       >
-                        Next Best Action
+                        Recommended Next Step
                       </Typography>
 
 
                       <Typography
+                        variant="body2"
                         sx={{
-                          fontSize: ".95rem",
+                          opacity: .8,
                           lineHeight: 1.7,
-                          opacity: .85,
                         }}
                       >
                         {careerReadiness?.next_action ||
-                          "Upload your resume to begin your career readiness assessment."}
+                          "Complete your resume analysis to begin."}
                       </Typography>
 
                     </Paper>
@@ -1214,6 +1422,7 @@ function Dashboard({
                 </Grid>
 
               </>
+
             )}
 
           </CardContent>
@@ -1243,7 +1452,7 @@ function Dashboard({
 
             {sectionTitle(
               "Resume Status",
-              "A quick overview of the information detected in your resume.",
+              "A quick overview of your current resume analysis.",
               <DescriptionIcon />
             )}
 
@@ -1253,96 +1462,252 @@ function Dashboard({
               spacing={2}
             >
 
-              {[
-                {
-                  value: skills.length,
-                  label: "Skills Detected",
-                  icon: <CodeIcon />,
-                },
+              {/* ATS */}
 
-                {
-                  value: education.length,
-                  label: "Education",
-                  icon: <SchoolIcon />,
-                },
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={3}
+              >
 
-                {
-                  value: experience.length,
-                  label: "Experience",
-                  icon: <WorkOutlineIcon />,
-                },
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 4,
 
-                {
-                  value: suggestions.length,
-                  label: "Improvement Areas",
-                  icon: <LightbulbIcon />,
-                },
-              ].map(
-                (
-                  item,
-                  index
-                ) => (
+                    background:
+                      "linear-gradient(145deg,#eef6ff,#ffffff)",
 
-                  <Grid
-                    item
-                    xs={6}
-                    md={3}
-                    key={index}
+                    border:
+                      "1px solid #dbeafe",
+                  }}
+                >
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
                   >
-
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 2.5,
-                        borderRadius: 4,
-                        textAlign: "center",
-
-                        background:
-                          "linear-gradient(145deg,#ffffff,#f2f5fb)",
-
-                        border:
-                          "1px solid #e5eaf2",
-
-                        height: "100%",
-                      }}
-                    >
-
-                      <Box
-                        sx={{
-                          color:
-                            "#1976d2",
-                          mb: 1,
-                        }}
-                      >
-                        {item.icon}
-                      </Box>
+                    ATS Compatibility
+                  </Typography>
 
 
-                      <Typography
-                        sx={{
-                          fontSize:
-                            "2rem",
-                          fontWeight:
-                            900,
-                        }}
-                      >
-                        {item.value}
-                      </Typography>
+                  <Typography
+                    variant="h4"
+                    fontWeight={950}
+                    sx={{
+                      mt: 1,
+                      color: "#1976d2",
+                    }}
+                  >
+                    {safeAts}
+                  </Typography>
 
 
-                      <Typography
-                        color="text.secondary"
-                        fontWeight={600}
-                      >
-                        {item.label}
-                      </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={safeAts}
+                    sx={{
+                      mt: 1.5,
+                      height: 7,
+                      borderRadius: 5,
+                    }}
+                  />
 
-                    </Paper>
+                </Paper>
 
-                  </Grid>
+              </Grid>
 
-                )
-              )}
+
+              {/* SEMANTIC */}
+
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={3}
+              >
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 4,
+
+                    background:
+                      "linear-gradient(145deg,#f5f3ff,#ffffff)",
+
+                    border:
+                      "1px solid #e9d5ff",
+                  }}
+                >
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    Semantic Match
+                  </Typography>
+
+
+                  <Typography
+                    variant="h4"
+                    fontWeight={950}
+                    sx={{
+                      mt: 1,
+                      color: "#7c3aed",
+                    }}
+                  >
+                    {Math.round(
+                      Number(
+                        semanticScore
+                      ) || 0
+                    )}
+                  </Typography>
+
+
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        Number(
+                          semanticScore
+                        ) || 0
+                      )
+                    )}
+                    sx={{
+                      mt: 1.5,
+                      height: 7,
+                      borderRadius: 5,
+                    }}
+                  />
+
+                </Paper>
+
+              </Grid>
+
+
+              {/* OVERALL */}
+
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={3}
+              >
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 4,
+
+                    background:
+                      "linear-gradient(145deg,#f0fdf4,#ffffff)",
+
+                    border:
+                      "1px solid #bbf7d0",
+                  }}
+                >
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    Overall Resume Score
+                  </Typography>
+
+
+                  <Typography
+                    variant="h4"
+                    fontWeight={950}
+                    sx={{
+                      mt: 1,
+                      color: "#16a34a",
+                    }}
+                  >
+                    {Math.round(
+                      Number(
+                        overallScore
+                      ) || 0
+                    )}
+                  </Typography>
+
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 1,
+                    }}
+                  >
+                    Overall resume analysis
+                  </Typography>
+
+                </Paper>
+
+              </Grid>
+
+
+              {/* GRADE */}
+
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={3}
+              >
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 4,
+
+                    background:
+                      "linear-gradient(145deg,#fff7ed,#ffffff)",
+
+                    border:
+                      "1px solid #fed7aa",
+                  }}
+                >
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  >
+                    Resume Grade
+                  </Typography>
+
+
+                  <Typography
+                    variant="h4"
+                    fontWeight={950}
+                    sx={{
+                      mt: 1,
+                      color: "#ea580c",
+                    }}
+                  >
+                    {resumeGrade || "N/A"}
+                  </Typography>
+
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 1,
+                    }}
+                  >
+                    Current resume grade
+                  </Typography>
+
+                </Paper>
+
+              </Grid>
 
             </Grid>
 
@@ -1352,7 +1717,7 @@ function Dashboard({
 
 
         {/* ================================================= */}
-        {/* CAREER DIRECTION */}
+        {/* PROFILE COMPLETENESS DETAILS */}
         {/* ================================================= */}
 
         <Card
@@ -1372,126 +1737,99 @@ function Dashboard({
           >
 
             {sectionTitle(
-              "Career Direction From Your Resume",
-              "This describes the type of role your current resume most strongly represents.",
-              <WorkOutlineIcon />
+              "Profile Completeness",
+              "Check which important resume areas TalentLens has detected.",
+              <AssignmentTurnedInIcon />
             )}
 
 
-            <Paper
-              elevation={0}
-              sx={{
-                p: {
-                  xs: 3,
-                  md: 4,
-                },
-
-                borderRadius: 4,
-
-                background:
-                  "linear-gradient(135deg,#eef4ff,#f5f0ff)",
-
-                border:
-                  "1px solid rgba(124,77,255,.12)",
-              }}
+            <Grid
+              container
+              spacing={2}
             >
 
-              <Typography
-                sx={{
-                  fontSize: {
-                    xs: "1.8rem",
-                    md: "2.5rem",
-                  },
+              {profileChecks.map(
+                (item, index) => (
 
-                  fontWeight: 950,
-                  color: "#263238",
-                  letterSpacing: "-1px",
-                }}
-              >
-                {careerReadiness?.predicted_role ||
-                  predictedRole}
-              </Typography>
-
-
-              <Typography
-                color="text.secondary"
-                sx={{
-                  mt: 1.5,
-                  lineHeight: 1.7,
-                  maxWidth: 750,
-                }}
-              >
-                TalentLens identifies the career direction
-                that your current resume most strongly
-                represents. This is a resume consistency
-                indicator, not a recommendation of what
-                career you should choose.
-              </Typography>
-
-
-              {roleEvidence.length > 0 && (
-
-                <>
-
-                  <Divider
-                    sx={{
-                      my: 3,
-                    }}
-                  />
-
-
-                  <Typography
-                    fontWeight={800}
-                    sx={{
-                      mb: 1.5,
-                    }}
-                  >
-                    Resume evidence
-                  </Typography>
-
-
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                    }}
+                  <Grid
+                    item
+                    xs={12}
+                    sm={6}
+                    md={4}
+                    key={index}
                   >
 
-                    {roleEvidence.map(
-                      (
-                        evidence,
-                        index
-                      ) => (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 4,
 
-                        <Chip
-                          key={index}
-                          label={evidence}
-                          sx={{
-                            fontWeight: 600,
-                            background:
-                              "rgba(25,118,210,.08)",
-                          }}
+                        background:
+                          item.complete
+                            ? "#f0fdf4"
+                            : "#fff7ed",
+
+                        border:
+                          item.complete
+                            ? "1px solid #bbf7d0"
+                            : "1px solid #fed7aa",
+                      }}
+                    >
+
+                      <Stack
+                        direction="row"
+                        spacing={1.5}
+                        alignItems="center"
+                      >
+
+                        <CheckCircleIcon
+                          color={
+                            item.complete
+                              ? "success"
+                              : "disabled"
+                          }
                         />
 
-                      )
-                    )}
 
-                  </Box>
+                        <Box>
 
-                </>
+                          <Typography
+                            fontWeight={850}
+                          >
+                            {item.label}
+                          </Typography>
 
+
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            {item.complete
+                              ? "Completed"
+                              : "Needs information"}
+                          </Typography>
+
+                        </Box>
+
+                      </Stack>
+
+                    </Paper>
+
+                  </Grid>
+
+                )
               )}
 
-            </Paper>
+            </Grid>
 
           </CardContent>
 
         </Card>
 
 
-        {/* ================================================= */}
-        {/* ATS SUPPORTING ANALYSIS */}
+                {/* ================================================= */}
+        {/* RESUME COMPATIBILITY / ATS */}
         {/* ================================================= */}
 
         <Card
@@ -1512,8 +1850,8 @@ function Dashboard({
 
             {sectionTitle(
               "Resume Compatibility",
-              "One technical metric that helps you understand how your resume may work with automated screening.",
-              <AssignmentTurnedInIcon />
+              "See how your resume performs for automated screening and career relevance.",
+              <DescriptionIcon />
             )}
 
 
@@ -1522,10 +1860,12 @@ function Dashboard({
               spacing={3}
             >
 
+              {/* ATS SCORE */}
+
               <Grid
                 item
                 xs={12}
-                md={5}
+                md={6}
               >
 
                 <Paper
@@ -1535,41 +1875,56 @@ function Dashboard({
                     borderRadius: 4,
 
                     background:
-                      "linear-gradient(145deg,#eef7ff,#ffffff)",
+                      "linear-gradient(135deg,#eef6ff,#ffffff)",
 
                     border:
-                      "1px solid #dcecff",
+                      "1px solid #dbeafe",
+
+                    height: "100%",
                   }}
                 >
 
-                  <Typography
-                    color="text.secondary"
-                    fontWeight={700}
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="center"
                   >
-                    ATS Compatibility Score
-                  </Typography>
+
+                    <AssignmentTurnedInIcon
+                      sx={{
+                        color: "#1976d2",
+                      }}
+                    />
+
+                    <Typography
+                      variant="h6"
+                      fontWeight={900}
+                    >
+                      ATS Compatibility
+                    </Typography>
+
+                  </Stack>
 
 
                   <Typography
                     sx={{
-                      fontSize: "3rem",
+                      fontSize: "3.2rem",
                       fontWeight: 950,
-                      mt: 1,
+                      mt: 2,
+                      color: "#1976d2",
                     }}
                   >
                     {safeAts}
-                    <Typography
-                      component="span"
-                      sx={{
-                        fontSize:
-                          "1.1rem",
-                        color:
-                          "text.secondary",
-                        ml: .5,
-                      }}
-                    >
-                      /100
-                    </Typography>
+                  </Typography>
+
+
+                  <Typography
+                    color="text.secondary"
+                    sx={{
+                      mb: 2,
+                    }}
+                  >
+                    out of 100
                   </Typography>
 
 
@@ -1577,30 +1932,36 @@ function Dashboard({
                     variant="determinate"
                     value={safeAts}
                     sx={{
-                      mt: 2,
-                      height: 9,
+                      height: 10,
                       borderRadius: 5,
-
-                      background:
-                        "#e5edf7",
-
-                      "& .MuiLinearProgress-bar": {
-                        background:
-                          "linear-gradient(90deg,#1976d2,#42a5f5)",
-                        borderRadius: 5,
-                      },
                     }}
                   />
+
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 2,
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    This indicates how compatible your
+                    resume is with automated screening
+                    systems.
+                  </Typography>
 
                 </Paper>
 
               </Grid>
 
 
+              {/* SEMANTIC MATCH */}
+
               <Grid
                 item
                 xs={12}
-                md={7}
+                md={6}
               >
 
                 <Paper
@@ -1608,38 +1969,94 @@ function Dashboard({
                   sx={{
                     p: 3,
                     borderRadius: 4,
-                    height: "100%",
 
                     background:
-                      "#f8fafc",
+                      "linear-gradient(135deg,#f5f3ff,#ffffff)",
 
                     border:
-                      "1px solid #e6ebf2",
+                      "1px solid #e9d5ff",
+
+                    height: "100%",
                   }}
                 >
 
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="center"
+                  >
+
+                    <PsychologyIcon
+                      sx={{
+                        color: "#7c3aed",
+                      }}
+                    />
+
+                    <Typography
+                      variant="h6"
+                      fontWeight={900}
+                    >
+                      Semantic Match
+                    </Typography>
+
+                  </Stack>
+
+
                   <Typography
-                    fontWeight={800}
                     sx={{
-                      mb: 1,
+                      fontSize: "3.2rem",
+                      fontWeight: 950,
+                      mt: 2,
+                      color: "#7c3aed",
                     }}
                   >
-                    What does this mean?
+                    {Math.round(
+                      Number(
+                        semanticScore
+                      ) || 0
+                    )}
                   </Typography>
 
 
                   <Typography
                     color="text.secondary"
                     sx={{
-                      lineHeight: 1.8,
+                      mb: 2,
                     }}
                   >
-                    The ATS Compatibility Score estimates
-                    how well the skills detected from your
-                    resume align with the analysis job
-                    requirements. It is a TalentLens compatibility
-                    measure, not the score produced by a
-                    specific company's ATS.
+                    out of 100
+                  </Typography>
+
+
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        Number(
+                          semanticScore
+                        ) || 0
+                      )
+                    )}
+                    sx={{
+                      height: 10,
+                      borderRadius: 5,
+                    }}
+                  />
+
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      mt: 2,
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    This indicates how closely your resume
+                    content matches the career direction
+                    identified by TalentLens.
                   </Typography>
 
                 </Paper>
@@ -1648,181 +2065,76 @@ function Dashboard({
 
             </Grid>
 
-          </CardContent>
 
-        </Card>
+            {/* OVERALL RESUME SCORE */}
 
-
-        {/* ================================================= */}
-        {/* AI RESUME INSIGHTS */}
-        {/* ================================================= */}
-
-        <Card
-          sx={{
-            ...cardStyle,
-            mb: 4,
-
-            background:
-              "linear-gradient(135deg,#101828,#172554,#312e81)",
-
-            color: "white",
-
-            "&:hover": {
-              boxShadow:
-                "0 25px 55px rgba(30,41,90,.25)",
-            },
-          }}
-        >
-
-          <CardContent
-            sx={{
-              p: {
-                xs: 3,
-                md: 4,
-              },
-            }}
-          >
-
-            <Stack
-              direction="row"
-              spacing={1.5}
-              alignItems="center"
+            <Paper
+              elevation={0}
               sx={{
-                mb: 3,
+                mt: 3,
+                p: 3,
+                borderRadius: 4,
+
+                background:
+                  "linear-gradient(135deg,#f0fdf4,#ffffff)",
+
+                border:
+                  "1px solid #bbf7d0",
               }}
             >
 
-              <Box
-                sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 3,
-
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-
-                  background:
-                    "rgba(255,255,255,.10)",
+              <Stack
+                direction={{
+                  xs: "column",
+                  md: "row",
                 }}
+                justifyContent="space-between"
+                alignItems={{
+                  xs: "flex-start",
+                  md: "center",
+                }}
+                spacing={2}
               >
-                <SmartToyIcon />
-              </Box>
+
+                <Box>
+
+                  <Typography
+                    variant="h6"
+                    fontWeight={900}
+                  >
+                    Overall Resume Score
+                  </Typography>
 
 
-              <Box>
+                  <Typography
+                    color="text.secondary"
+                    sx={{
+                      mt: .5,
+                    }}
+                  >
+                    Your combined resume analysis score.
+                  </Typography>
 
-                <Typography
-                  variant="h5"
-                  fontWeight={900}
-                >
-                  AI Resume Insights
-                </Typography>
+                </Box>
 
 
                 <Typography
                   sx={{
-                    opacity: .7,
-                    fontSize: ".9rem",
+                    fontSize: "3rem",
+                    fontWeight: 950,
+                    color: "#16a34a",
                   }}
                 >
-                  Personalized observations from your resume.
+                  {Math.round(
+                    Number(
+                      overallScore
+                    ) || 0
+                  )}
                 </Typography>
 
-              </Box>
+              </Stack>
 
-            </Stack>
-
-
-            {resumeInsights &&
-            Object.keys(
-              resumeInsights
-            ).length > 0 ? (
-
-              <Grid
-                container
-                spacing={2}
-              >
-
-                {Object.entries(
-                  resumeInsights
-                ).map(
-                  (
-                    [key, value],
-                    index
-                  ) => (
-
-                    <Grid
-                      item
-                      xs={12}
-                      md={6}
-                      key={index}
-                    >
-
-                      <Paper
-                        elevation={0}
-                        sx={{
-                          p: 2.5,
-                          borderRadius: 3,
-
-                          background:
-                            "rgba(255,255,255,.07)",
-
-                          color: "white",
-
-                          border:
-                            "1px solid rgba(255,255,255,.10)",
-                        }}
-                      >
-
-                        <Typography
-                          fontWeight={800}
-                          sx={{
-                            mb: .7,
-                            textTransform:
-                              "capitalize",
-                          }}
-                        >
-                          {String(key).replace(
-                            /_/g,
-                            " "
-                          )}
-                        </Typography>
-
-
-                        <Typography
-                          sx={{
-                            opacity: .8,
-                            fontSize: ".92rem",
-                            lineHeight: 1.6,
-                          }}
-                        >
-                          {Array.isArray(value)
-                            ? value.join(", ")
-                            : String(value)}
-                        </Typography>
-
-                      </Paper>
-
-                    </Grid>
-
-                  )
-                )}
-
-              </Grid>
-
-            ) : (
-
-              <Typography
-                sx={{
-                  opacity: .7,
-                }}
-              >
-                AI-generated resume insights will
-                appear here after analysis.
-              </Typography>
-
-            )}
+            </Paper>
 
           </CardContent>
 
@@ -1856,56 +2168,47 @@ function Dashboard({
             )}
 
 
-            {skills.length > 0 ? (
+            {Array.isArray(skills) &&
+            skills.length > 0 ? (
 
-              <Box
-                sx={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 1.2,
-                }}
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                useFlexGap
               >
 
                 {skills.map(
-                  (
-                    skill,
-                    index
-                  ) => (
+                  (skill, index) => (
 
                     <Chip
                       key={index}
                       label={skill}
                       sx={{
-                        px: 1,
-                        py: 2.5,
-
-                        borderRadius: 3,
-
+                        mb: .7,
                         fontWeight: 700,
 
                         background:
-                          "linear-gradient(135deg,#eef4ff,#f4efff)",
-
-                        border:
-                          "1px solid #dce3f4",
+                          "#eef2ff",
 
                         color:
-                          "#263238",
+                          "#4338ca",
+
+                        border:
+                          "1px solid #c7d2fe",
                       }}
                     />
 
                   )
                 )}
 
-              </Box>
+              </Stack>
 
             ) : (
 
-              <Typography
-                color="text.secondary"
-              >
-                No skills detected.
-              </Typography>
+              <Alert severity="info">
+                No skills were detected from your resume.
+              </Alert>
 
             )}
 
@@ -1926,7 +2229,9 @@ function Dashboard({
           }}
         >
 
+          {/* ================================================= */}
           {/* EDUCATION */}
+          {/* ================================================= */}
 
           <Grid
             item
@@ -1952,56 +2257,87 @@ function Dashboard({
 
                 {sectionTitle(
                   "Education",
-                  "Academic information detected from your resume.",
+                  "Education information detected from your resume.",
                   <SchoolIcon />
                 )}
 
 
-                {education.length > 0 ? (
+                {Array.isArray(education) &&
+                education.length > 0 ? (
 
-                  <Stack spacing={1.5}>
+                  <Stack spacing={2}>
 
                     {education.map(
-                      (
-                        item,
-                        index
-                      ) => (
+                      (item, index) => (
 
                         <Paper
                           key={index}
                           elevation={0}
                           sx={{
                             p: 2.5,
-                            borderRadius: 3,
+                            borderRadius: 4,
 
                             background:
-                              "#f7f9fd",
+                              "#f8fafc",
 
                             border:
-                              "1px solid #e6ebf3",
+                              "1px solid #e5e7eb",
                           }}
                         >
 
-                          <Stack
-                            direction="row"
-                            spacing={1.5}
-                            alignItems="flex-start"
+                          <Typography
+                            fontWeight={850}
                           >
+                            {typeof item === "string"
+                              ? item
+                              : item.degree ||
+                                item.title ||
+                                item.qualification ||
+                                item.program ||
+                                "Education"}
+                          </Typography>
 
-                            <CheckCircleIcon
-                              color="primary"
-                            />
 
-                            <Typography
-                              fontWeight={600}
-                            >
-                              {typeof item ===
-                              "string"
-                                ? item
-                                : JSON.stringify(item)}
-                            </Typography>
+                          {typeof item === "object" && (
 
-                          </Stack>
+                            <>
+
+                              {(item.institution ||
+                                item.college ||
+                                item.university) && (
+
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{
+                                    mt: .6,
+                                  }}
+                                >
+                                  {item.institution ||
+                                    item.college ||
+                                    item.university}
+                                </Typography>
+
+                              )}
+
+
+                              {item.year && (
+
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{
+                                    mt: .4,
+                                  }}
+                                >
+                                  {item.year}
+                                </Typography>
+
+                              )}
+
+                            </>
+
+                          )}
 
                         </Paper>
 
@@ -2012,11 +2348,9 @@ function Dashboard({
 
                 ) : (
 
-                  <Typography
-                    color="text.secondary"
-                  >
-                    No education information detected.
-                  </Typography>
+                  <Alert severity="info">
+                    No education information was detected.
+                  </Alert>
 
                 )}
 
@@ -2027,7 +2361,9 @@ function Dashboard({
           </Grid>
 
 
+          {/* ================================================= */}
           {/* EXPERIENCE */}
+          {/* ================================================= */}
 
           <Grid
             item
@@ -2058,51 +2394,81 @@ function Dashboard({
                 )}
 
 
-                {experience.length > 0 ? (
+                {Array.isArray(experience) &&
+                experience.length > 0 ? (
 
-                  <Stack spacing={1.5}>
+                  <Stack spacing={2}>
 
                     {experience.map(
-                      (
-                        item,
-                        index
-                      ) => (
+                      (item, index) => (
 
                         <Paper
                           key={index}
                           elevation={0}
                           sx={{
                             p: 2.5,
-                            borderRadius: 3,
+                            borderRadius: 4,
 
                             background:
-                              "#f7f9fd",
+                              "#f8fafc",
 
                             border:
-                              "1px solid #e6ebf3",
+                              "1px solid #e5e7eb",
                           }}
                         >
 
-                          <Stack
-                            direction="row"
-                            spacing={1.5}
-                            alignItems="flex-start"
+                          <Typography
+                            fontWeight={850}
                           >
+                            {typeof item === "string"
+                              ? item
+                              : item.role ||
+                                item.title ||
+                                item.position ||
+                                "Experience"}
+                          </Typography>
 
-                            <CheckCircleIcon
-                              color="primary"
-                            />
 
-                            <Typography
-                              fontWeight={600}
-                            >
-                              {typeof item ===
-                              "string"
-                                ? item
-                                : JSON.stringify(item)}
-                            </Typography>
+                          {typeof item === "object" && (
 
-                          </Stack>
+                            <>
+
+                              {(item.company ||
+                                item.organization) && (
+
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{
+                                    mt: .6,
+                                  }}
+                                >
+                                  {item.company ||
+                                    item.organization}
+                                </Typography>
+
+                              )}
+
+
+                              {(item.duration ||
+                                item.period) && (
+
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{
+                                    mt: .4,
+                                  }}
+                                >
+                                  {item.duration ||
+                                    item.period}
+                                </Typography>
+
+                              )}
+
+                            </>
+
+                          )}
 
                         </Paper>
 
@@ -2113,11 +2479,9 @@ function Dashboard({
 
                 ) : (
 
-                  <Typography
-                    color="text.secondary"
-                  >
-                    No experience information detected.
-                  </Typography>
+                  <Alert severity="info">
+                    No experience information was detected.
+                  </Alert>
 
                 )}
 
@@ -2130,8 +2494,335 @@ function Dashboard({
         </Grid>
 
 
+{/* ================================================= */}
+{/* CAREER DIRECTION */}
+{/* ================================================= */}
+
+<Card
+  sx={{
+    ...cardStyle,
+    mb: 4,
+  }}
+>
+  <CardContent
+    sx={{
+      p: {
+        xs: 2.5,
+        md: 3,
+      },
+    }}
+  >
+
+    {sectionTitle(
+      "Career Direction",
+      "Your resume's current career direction at a glance.",
+      <WorkOutlineIcon />
+    )}
+
+    <Paper
+      elevation={0}
+      sx={{
+        p: {
+          xs: 2.5,
+          md: 3,
+        },
+
+        borderRadius: 4,
+
+        background:
+          "linear-gradient(135deg,#eef6ff,#f8f5ff)",
+
+        border:
+          "1px solid #dbeafe",
+      }}
+    >
+
+      <Grid
+        container
+        spacing={3}
+        alignItems="center"
+      >
+
         {/* ================================================= */}
-        {/* IMPROVEMENTS */}
+        {/* PREDICTED ROLE */}
+        {/* ================================================= */}
+
+        <Grid
+          item
+          xs={12}
+          md={4}
+        >
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              fontWeight: 800,
+              letterSpacing: 0.8,
+              mb: 0.8,
+            }}
+          >
+            PREDICTED CAREER ROLE
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight={950}
+            sx={{
+              color: "#172033",
+              lineHeight: 1.15,
+            }}
+          >
+            {predictedRole ||
+              "Not predicted"}
+          </Typography>
+
+        </Grid>
+
+
+        {/* ================================================= */}
+        {/* KEY RESUME SIGNALS */}
+        {/* ================================================= */}
+
+        <Grid
+          item
+          xs={12}
+          md={8}
+        >
+
+          <Typography
+            fontWeight={900}
+            sx={{
+              mb: 1.2,
+              color: "#172033",
+            }}
+          >
+            Key Resume Signals
+          </Typography>
+
+          {Array.isArray(roleEvidence) &&
+          roleEvidence.length > 0 ? (
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+              }}
+            >
+
+              {roleEvidence
+                .map((item) => {
+
+                  if (
+                    typeof item === "string"
+                  ) {
+                    return item;
+                  }
+
+                  return (
+                    item?.label ||
+                    item?.reason ||
+                    item?.text ||
+                    ""
+                  );
+                })
+                .map((item) =>
+                  String(item)
+                    .replace(
+                      /^skill:\s*/i,
+                      ""
+                    )
+                    .replace(
+                      /^resume evidence:\s*/i,
+                      ""
+                    )
+                    .trim()
+                )
+                .filter(Boolean)
+                .filter(
+                  (item, index, array) =>
+                    array.indexOf(item) === index
+                )
+                .slice(0, 8)
+                .map((item, index) => (
+
+                  <Chip
+                    key={index}
+                    label={item}
+                    size="small"
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 650,
+
+                      backgroundColor:
+                        "#ffffff",
+
+                      border:
+                        "1px solid #dbeafe",
+
+                      color:
+                        "#334155",
+
+                      maxWidth: "100%",
+
+                      "& .MuiChip-label": {
+                        whiteSpace:
+                          "normal",
+                        py: 0.6,
+                      },
+                    }}
+                  />
+
+                ))}
+
+            </Box>
+
+          ) : (
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                lineHeight: 1.6,
+              }}
+            >
+              Upload and analyze your resume
+              to see the key signals supporting
+              your predicted career direction.
+            </Typography>
+
+          )}
+
+        </Grid>
+
+      </Grid>
+
+    </Paper>
+
+  </CardContent>
+</Card>
+                {/* ================================================= */}
+        {/* AI RESUME INSIGHTS */}
+        {/* ================================================= */}
+
+        <Card
+          sx={{
+            ...cardStyle,
+            mb: 4,
+          }}
+        >
+
+          <CardContent
+            sx={{
+              p: {
+                xs: 3,
+                md: 4,
+              },
+            }}
+          >
+
+            {sectionTitle(
+              "AI Resume Insights",
+              "AI-generated insights to help you understand and improve your resume.",
+              <AutoAwesomeIcon />
+            )}
+
+
+            {resumeInsights &&
+            Object.keys(resumeInsights).length > 0 ? (
+
+              <Grid
+                container
+                spacing={3}
+              >
+
+                {Object.entries(
+                  resumeInsights
+                ).map(
+                  ([key, value]) => (
+
+                    <Grid
+                      item
+                      xs={12}
+                      md={6}
+                      key={key}
+                    >
+
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 3,
+                          height: "100%",
+                          borderRadius: 4,
+
+                          background:
+                            "linear-gradient(135deg,#faf7ff,#ffffff)",
+
+                          border:
+                            "1px solid #e9ddff",
+                        }}
+                      >
+
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={850}
+                          sx={{
+                            mb: 1,
+                            textTransform:
+                              "capitalize",
+                          }}
+                        >
+                          {String(key)
+                            .replace(
+                              /_/g,
+                              " "
+                            )}
+                        </Typography>
+
+
+                        <Typography
+                          color="text.secondary"
+                          sx={{
+                            lineHeight: 1.8,
+                            whiteSpace:
+                              "pre-wrap",
+                          }}
+                        >
+                          {Array.isArray(value)
+                            ? value.join(", ")
+                            : typeof value ===
+                              "object"
+                            ? JSON.stringify(
+                                value
+                              )
+                            : String(value)}
+                        </Typography>
+
+                      </Paper>
+
+                    </Grid>
+
+                  )
+                )}
+
+              </Grid>
+
+            ) : (
+
+              <Alert severity="info">
+                No AI resume insights are available yet.
+              </Alert>
+
+            )}
+
+          </CardContent>
+
+        </Card>
+
+
+        {/* ================================================= */}
+        {/* WHAT YOU CAN IMPROVE */}
         {/* ================================================= */}
 
         <Card
@@ -2184,10 +2875,10 @@ function Dashboard({
                           borderRadius: 4,
 
                           background:
-                            "linear-gradient(145deg,#fffaf0,#ffffff)",
+                            "#fffaf0",
 
                           border:
-                            "1px solid #f5e6c8",
+                            "1px solid #fde68a",
                         }}
                       >
 
@@ -2201,13 +2892,13 @@ function Dashboard({
                             sx={{
                               color:
                                 "#f59e0b",
+                              mt: 0.2,
                             }}
                           />
 
                           <Typography
-                            fontWeight={600}
                             sx={{
-                              lineHeight: 1.6,
+                              lineHeight: 1.7,
                             }}
                           >
                             {suggestion}
@@ -2226,8 +2917,9 @@ function Dashboard({
 
             ) : (
 
-              <Alert severity="info">
-                No additional suggestions available.
+              <Alert severity="success">
+                Your resume currently has no major improvement
+                suggestions.
               </Alert>
 
             )}
@@ -2235,28 +2927,37 @@ function Dashboard({
           </CardContent>
 
         </Card>
-
-
-        {/* ================================================= */}
-        {/* AI INTERVIEW PREPARATION */}
+                {/* ================================================= */}
+        {/* AI INTERVIEW CENTER */}
         {/* ================================================= */}
 
         <Card
           sx={{
-            ...cardStyle,
             mb: 4,
+            borderRadius: 5,
+            overflow: "hidden",
 
-            background:
-              "linear-gradient(135deg,#ffffff,#f4f0ff)",
+            boxShadow:
+              "0 18px 45px rgba(79,70,229,.15)",
+
+            border:
+              "1px solid rgba(99,102,241,.15)",
           }}
         >
 
-          <CardContent
+          {/* HERO */}
+
+          <Box
             sx={{
               p: {
                 xs: 3,
                 md: 4,
               },
+
+              background:
+                "linear-gradient(135deg,#4f46e5 0%,#7c3aed 55%,#9333ea 100%)",
+
+              color: "white",
             }}
           >
 
@@ -2265,60 +2966,71 @@ function Dashboard({
                 xs: "column",
                 md: "row",
               }}
-              justifyContent="space-between"
+              spacing={3}
               alignItems={{
                 xs: "flex-start",
                 md: "center",
               }}
-              spacing={3}
+              justifyContent="space-between"
             >
 
               <Box>
 
                 <Stack
                   direction="row"
-                  spacing={1.5}
+                  spacing={1}
                   alignItems="center"
                   sx={{
                     mb: 1,
                   }}
                 >
 
-                  <SmartToyIcon
-                    sx={{
-                      color:
-                        "#7c4dff",
-                      fontSize: 32,
-                    }}
-                  />
+                  <SmartToyIcon />
 
                   <Typography
-                    variant="h5"
-                    fontWeight={900}
+                    variant="overline"
+                    sx={{
+                      fontWeight: 800,
+                      letterSpacing: 1,
+                    }}
                   >
-                    AI Interview Preparation
+                    AI INTERVIEW CENTER
                   </Typography>
 
                 </Stack>
 
 
                 <Typography
-                  color="text.secondary"
+                  variant="h4"
                   sx={{
-                    maxWidth: 700,
+                    fontWeight: 900,
+                    mb: 1,
+
+                    fontSize: {
+                      xs: "1.8rem",
+                      md: "2.4rem",
+                    },
+                  }}
+                >
+                  Become Interview-Ready
+                </Typography>
+
+
+                <Typography
+                  sx={{
+                    maxWidth: 720,
+                    opacity: .92,
                     lineHeight: 1.7,
                   }}
                 >
-                  Practice interviews using your actual
-                  resume. TalentLens can ask about your
-                  skills, projects, education, experience
-                  and career direction.
+                  Practice realistic interviews using your
+                  resume and skills. Use camera and voice,
+                  answer naturally, and receive AI-powered
+                  feedback after your interview.
                 </Typography>
 
               </Box>
 
-
-              {/* ONLY MAIN INTERVIEW BUTTON */}
 
               <Button
                 variant="contained"
@@ -2326,26 +3038,23 @@ function Dashboard({
                 endIcon={
                   <ArrowForwardIcon />
                 }
-                onClick={() => {
-                  window.location.href =
-                    "/ai-interview";
-                }}
+                onClick={
+                  openInterviewCenter
+                }
                 sx={{
+                  minWidth: 220,
+                  py: 1.4,
                   px: 3,
-                  py: 1.5,
                   borderRadius: 3,
+
+                  backgroundColor: "white",
+                  color: "#4f46e5",
 
                   fontWeight: 900,
 
-                  background:
-                    "linear-gradient(135deg,#1976d2,#7c4dff)",
-
-                  boxShadow:
-                    "0 10px 25px rgba(92,77,255,.22)",
-
                   "&:hover": {
-                    background:
-                      "linear-gradient(135deg,#1565c0,#6a3de8)",
+                    backgroundColor:
+                      "#f5f3ff",
                   },
                 }}
               >
@@ -2355,17 +3064,112 @@ function Dashboard({
             </Stack>
 
 
-            {/* INTERVIEW OPTIONS */}
+            {/* FEATURES */}
 
-            <Grid
-              container
-              spacing={2}
+            <Stack
+              direction="row"
+              spacing={1}
+              flexWrap="wrap"
+              useFlexGap
               sx={{
                 mt: 3,
               }}
             >
 
-              {/* RESUME */}
+              {[
+                "Resume Based",
+                "AI Feedback",
+                "Camera & Voice",
+                "Personalized Questions",
+              ].map(
+                (item) => (
+
+                  <Chip
+                    key={item}
+                    label={item}
+                    sx={{
+                      color: "white",
+
+                      border:
+                        "1px solid rgba(255,255,255,.35)",
+
+                      backgroundColor:
+                        "rgba(255,255,255,.12)",
+
+                      fontWeight: 700,
+                    }}
+                  />
+
+                )
+              )}
+
+            </Stack>
+
+          </Box>
+
+
+          <CardContent
+            sx={{
+              p: {
+                xs: 2.5,
+                md: 4,
+              },
+            }}
+          >
+
+            {/* PRACTICE HEADER */}
+
+            <Stack
+              direction={{
+                xs: "column",
+                sm: "row",
+              }}
+              justifyContent="space-between"
+              alignItems={{
+                xs: "flex-start",
+                sm: "center",
+              }}
+              spacing={2}
+              sx={{
+                mb: 3,
+              }}
+            >
+
+              <Box>
+
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 900,
+                  }}
+                >
+                  Choose Your Practice
+                </Typography>
+
+
+                <Typography
+                  color="text.secondary"
+                  sx={{
+                    mt: .5,
+                  }}
+                >
+                  Select a practice area and continue to
+                  the AI Interview Center.
+                </Typography>
+
+              </Box>
+
+            </Stack>
+
+
+            {/* PRACTICE CARDS */}
+
+            <Grid
+              container
+              spacing={2.5}
+            >
+
+              {/* RESUME MOCK */}
 
               <Grid
                 item
@@ -2374,50 +3178,126 @@ function Dashboard({
                 md={3}
               >
 
-                <Paper
-                  elevation={0}
+                <Card
                   sx={{
-                    p: 2.5,
-                    borderRadius: 4,
                     height: "100%",
-
-                    background:
-                      "linear-gradient(145deg,#eef4ff,#ffffff)",
+                    borderRadius: 3,
 
                     border:
-                      "1px solid #dcecff",
+                      "2px solid #6366f1",
+
+                    boxShadow: "none",
+
+                    position: "relative",
+
+                    transition:
+                      "all .25s ease",
+
+                    "&:hover": {
+                      transform:
+                        "translateY(-5px)",
+
+                      boxShadow:
+                        "0 12px 28px rgba(79,70,229,.15)",
+                    },
                   }}
                 >
 
-                  <RecordVoiceOverIcon
+                  <Chip
+                    label="Recommended"
+                    size="small"
                     sx={{
+                      position: "absolute",
+                      top: 12,
+                      right: 12,
+
+                      fontWeight: 700,
+
+                      backgroundColor:
+                        "#eef2ff",
+
                       color:
-                        "#1976d2",
-                      fontSize: 32,
-                      mb: 1,
+                        "#4f46e5",
                     }}
                   />
 
 
-                  <Typography
-                    fontWeight={900}
+                  <CardContent
                     sx={{
-                      mb: .5,
+                      p: 2.5,
                     }}
                   >
-                    Resume Interview
-                  </Typography>
+
+                    <Box
+                      sx={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 2,
+
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+
+                        backgroundColor:
+                          "#eef2ff",
+
+                        color:
+                          "#4f46e5",
+
+                        mb: 2,
+                      }}
+                    >
+                      <DescriptionIcon />
+                    </Box>
 
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    Questions generated from
-                    your resume.
-                  </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 800,
+                        mb: 1,
+                      }}
+                    >
+                      AI Resume Mock
+                    </Typography>
 
-                </Paper>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        minHeight: 90,
+                        lineHeight: 1.6,
+                        mb: 2,
+                      }}
+                    >
+                      Practice questions generated
+                      from your resume, skills,
+                      education and experience.
+                    </Typography>
+
+
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      endIcon={
+                        <ArrowForwardIcon />
+                      }
+                      onClick={
+                        openInterviewCenter
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        fontWeight: 700,
+                        py: 1,
+                      }}
+                    >
+                      Start Mock Interview
+                    </Button>
+
+                  </CardContent>
+
+                </Card>
 
               </Grid>
 
@@ -2431,50 +3311,105 @@ function Dashboard({
                 md={3}
               >
 
-                <Paper
-                  elevation={0}
+                <Card
                   sx={{
-                    p: 2.5,
-                    borderRadius: 4,
                     height: "100%",
-
-                    background:
-                      "linear-gradient(145deg,#f4efff,#ffffff)",
+                    borderRadius: 3,
 
                     border:
-                      "1px solid #e8dcff",
+                      "1px solid #e5e7eb",
+
+                    boxShadow: "none",
+
+                    transition:
+                      "all .25s ease",
+
+                    "&:hover": {
+                      transform:
+                        "translateY(-5px)",
+
+                      boxShadow:
+                        "0 10px 25px rgba(0,0,0,.08)",
+                    },
                   }}
                 >
 
-                  <CodeIcon
+                  <CardContent
                     sx={{
-                      color:
-                        "#7c4dff",
-                      fontSize: 32,
-                      mb: 1,
-                    }}
-                  />
-
-
-                  <Typography
-                    fontWeight={900}
-                    sx={{
-                      mb: .5,
+                      p: 2.5,
                     }}
                   >
-                    Technical Practice
-                  </Typography>
+
+                    <Box
+                      sx={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 2,
+
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+
+                        backgroundColor:
+                          "#eef2ff",
+
+                        color:
+                          "#4f46e5",
+
+                        mb: 2,
+                      }}
+                    >
+                      <CodeIcon />
+                    </Box>
 
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    Practice questions related
-                    to your resume skills.
-                  </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 800,
+                        mb: 1,
+                      }}
+                    >
+                      Technical Practice
+                    </Typography>
 
-                </Paper>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        minHeight: 90,
+                        lineHeight: 1.6,
+                        mb: 2,
+                      }}
+                    >
+                      Practice technical questions
+                      based on your skills and
+                      target career role.
+                    </Typography>
+
+
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      endIcon={
+                        <ArrowForwardIcon />
+                      }
+                      onClick={
+                        openInterviewCenter
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        fontWeight: 700,
+                        py: 1,
+                      }}
+                    >
+                      Start Practice
+                    </Button>
+
+                  </CardContent>
+
+                </Card>
 
               </Grid>
 
@@ -2488,55 +3423,110 @@ function Dashboard({
                 md={3}
               >
 
-                <Paper
-                  elevation={0}
+                <Card
                   sx={{
-                    p: 2.5,
-                    borderRadius: 4,
                     height: "100%",
-
-                    background:
-                      "linear-gradient(145deg,#edfff9,#ffffff)",
+                    borderRadius: 3,
 
                     border:
-                      "1px solid #d7f5ea",
+                      "1px solid #e5e7eb",
+
+                    boxShadow: "none",
+
+                    transition:
+                      "all .25s ease",
+
+                    "&:hover": {
+                      transform:
+                        "translateY(-5px)",
+
+                      boxShadow:
+                        "0 10px 25px rgba(0,0,0,.08)",
+                    },
                   }}
                 >
 
-                  <PsychologyIcon
+                  <CardContent
                     sx={{
-                      color:
-                        "#00a896",
-                      fontSize: 32,
-                      mb: 1,
-                    }}
-                  />
-
-
-                  <Typography
-                    fontWeight={900}
-                    sx={{
-                      mb: .5,
+                      p: 2.5,
                     }}
                   >
-                    HR & Behavioral
-                  </Typography>
+
+                    <Box
+                      sx={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 2,
+
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+
+                        backgroundColor:
+                          "#ecfdf5",
+
+                        color:
+                          "#059669",
+
+                        mb: 2,
+                      }}
+                    >
+                      <WorkOutlineIcon />
+                    </Box>
 
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    Prepare for recruiter and
-                    behavioral questions.
-                  </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 800,
+                        mb: 1,
+                      }}
+                    >
+                      HR Interview
+                    </Typography>
 
-                </Paper>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        minHeight: 90,
+                        lineHeight: 1.6,
+                        mb: 2,
+                      }}
+                    >
+                      Practice common HR questions,
+                      communication, motivation and
+                      workplace situations.
+                    </Typography>
+
+
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      endIcon={
+                        <ArrowForwardIcon />
+                      }
+                      onClick={
+                        openInterviewCenter
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        fontWeight: 700,
+                        py: 1,
+                      }}
+                    >
+                      Start Practice
+                    </Button>
+
+                  </CardContent>
+
+                </Card>
 
               </Grid>
 
 
-              {/* TRACKING */}
+              {/* BEHAVIORAL */}
 
               <Grid
                 item
@@ -2545,150 +3535,226 @@ function Dashboard({
                 md={3}
               >
 
-                <Paper
-                  elevation={0}
+                <Card
                   sx={{
-                    p: 2.5,
-                    borderRadius: 4,
                     height: "100%",
-
-                    background:
-                      "linear-gradient(145deg,#fffaf0,#ffffff)",
+                    borderRadius: 3,
 
                     border:
-                      "1px solid #f5e6c8",
+                      "1px solid #e5e7eb",
+
+                    boxShadow: "none",
+
+                    transition:
+                      "all .25s ease",
+
+                    "&:hover": {
+                      transform:
+                        "translateY(-5px)",
+
+                      boxShadow:
+                        "0 10px 25px rgba(0,0,0,.08)",
+                    },
                   }}
                 >
 
-                  <TrendingUpIcon
+                  <CardContent
                     sx={{
-                      color:
-                        "#f59e0b",
-                      fontSize: 32,
-                      mb: 1,
-                    }}
-                  />
-
-
-                  <Typography
-                    fontWeight={900}
-                    sx={{
-                      mb: .5,
+                      p: 2.5,
                     }}
                   >
-                    Performance Tracking
-                  </Typography>
+
+                    <Box
+                      sx={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 2,
+
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+
+                        backgroundColor:
+                          "#fff7ed",
+
+                        color:
+                          "#ea580c",
+
+                        mb: 2,
+                      }}
+                    >
+                      <PsychologyIcon />
+                    </Box>
 
 
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    Track interview performance
-                    after completing interviews.
-                  </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 800,
+                        mb: 1,
+                      }}
+                    >
+                      Behavioral Practice
+                    </Typography>
 
-                </Paper>
+
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        minHeight: 90,
+                        lineHeight: 1.6,
+                        mb: 2,
+                      }}
+                    >
+                      Improve answers for teamwork,
+                      leadership, challenges and
+                      real-world situations.
+                    </Typography>
+
+
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      endIcon={
+                        <ArrowForwardIcon />
+                      }
+                      onClick={
+                        openInterviewCenter
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        fontWeight: 700,
+                        py: 1,
+                      }}
+                    >
+                      Start Practice
+                    </Button>
+
+                  </CardContent>
+
+                </Card>
 
               </Grid>
 
             </Grid>
 
 
-            {/* SAMPLE QUESTIONS */}
-
-            {interviewQuestions.length > 0 && (
-
-              <>
-
-                <Divider
-                  sx={{
-                    my: 3,
-                  }}
-                />
+            <Divider
+              sx={{
+                my: 4,
+              }}
+            />
 
 
-                <Typography
-                  fontWeight={900}
-                  sx={{
-                    mb: 2,
-                  }}
-                >
-                  Sample Resume Interview Questions
-                </Typography>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 900,
+                mb: 2.5,
+              }}
+            >
+              How Your AI Interview Works
+            </Typography>
 
 
-                <Stack spacing={1.5}>
+            <Grid
+              container
+              spacing={2}
+            >
 
-                  {interviewQuestions
-                    .slice(0, 3)
-                    .map(
-                      (
-                        question,
-                        index
-                      ) => (
+              {[
+                {
+                  number: "01",
+                  title: "Choose Practice",
+                  text:
+                    "Select the interview type you want to practice.",
+                },
 
-                        <Paper
-                          key={index}
-                          elevation={0}
-                          sx={{
-                            p: 2,
+                {
+                  number: "02",
+                  title: "Answer Naturally",
+                  text:
+                    "Use your camera and microphone to answer AI-generated questions.",
+                },
 
-                            borderRadius: 3,
+                {
+                  number: "03",
+                  title: "Get Feedback",
+                  text:
+                    "Review your performance and identify areas to improve.",
+                },
+              ].map(
+                (step) => (
 
-                            background:
-                              "rgba(255,255,255,.8)",
+                  <Grid
+                    item
+                    xs={12}
+                    md={4}
+                    key={step.number}
+                  >
 
-                            border:
-                              "1px solid #e6e0ff",
-                          }}
-                        >
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 3,
 
-                          <Stack
-                            direction="row"
-                            spacing={1.5}
-                          >
+                        background:
+                          "#f8fafc",
 
-                            <Typography
-                              fontWeight={900}
-                              color="primary"
-                            >
-                              Q{index + 1}
-                            </Typography>
+                        border:
+                          "1px solid #e5e7eb",
+                      }}
+                    >
+
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontWeight: 900,
+                          color: "#6366f1",
+                          mb: 1,
+                        }}
+                      >
+                        {step.number}
+                      </Typography>
 
 
-                            <Typography
-                              fontWeight={600}
-                            >
-                              {typeof question ===
-                              "string"
-                                ? question
-                                : question.question ||
-                                  JSON.stringify(
-                                    question
-                                  )}
-                            </Typography>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 800,
+                          mb: .5,
+                        }}
+                      >
+                        {step.title}
+                      </Typography>
 
-                          </Stack>
 
-                        </Paper>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {step.text}
+                      </Typography>
 
-                      )
-                    )}
+                    </Paper>
 
-                </Stack>
+                  </Grid>
 
-              </>
+                )
+              )}
 
-            )}
+            </Grid>
 
           </CardContent>
 
         </Card>
-
-
-        {/* ================================================= */}
-        {/* FINAL MESSAGE */}
+                {/* ================================================= */}
+        {/* FINAL NEXT STEP */}
         {/* ================================================= */}
 
         <Card
@@ -2722,6 +3788,7 @@ function Dashboard({
                 xs: "flex-start",
                 md: "center",
               }}
+              justifyContent="space-between"
             >
 
               <Box>
@@ -2750,6 +3817,35 @@ function Dashboard({
                 </Typography>
 
               </Box>
+
+
+              <Button
+                variant="contained"
+                size="large"
+                endIcon={
+                  <ArrowForwardIcon />
+                }
+                onClick={
+                  openInterviewCenter
+                }
+                sx={{
+                  px: 3,
+                  py: 1.3,
+                  borderRadius: 3,
+
+                  backgroundColor: "white",
+                  color: "#1976d2",
+
+                  fontWeight: 900,
+
+                  "&:hover": {
+                    backgroundColor:
+                      "#f5f5f5",
+                  },
+                }}
+              >
+                Practice Interview
+              </Button>
 
             </Stack>
 

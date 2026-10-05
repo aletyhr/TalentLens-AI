@@ -79,37 +79,13 @@ function Navbar() {
   const handleLogout =
     () => {
 
-      /*
-       * Remove ALL account-specific
-       * session information.
-       */
-
       clearSessionData();
-
-
-      /*
-       * Make sure the username
-       * is also removed.
-       */
 
       localStorage.removeItem(
         "name"
       );
 
-
-      /*
-       * Close profile menu.
-       */
-
       setAnchorEl(null);
-
-
-      /*
-       * Go to login and prevent
-       * returning to the previous
-       * authenticated page using
-       * browser history.
-       */
 
       navigate(
         "/login",
@@ -195,6 +171,8 @@ function Navbar() {
             }}
           >
 
+            {/* HOME */}
+
             <Button
               component={Link}
               to="/"
@@ -214,6 +192,8 @@ function Navbar() {
             </Button>
 
 
+            {/* DASHBOARD */}
+
             <Button
               component={Link}
               to="/dashboard"
@@ -230,6 +210,29 @@ function Navbar() {
               DASHBOARD
             </Button>
 
+
+            {/* =================================================
+                ANALYTICS
+            ================================================= */}
+
+            <Button
+              component={Link}
+              to="/analytics"
+              sx={{
+                color: "white",
+                fontWeight:
+                  isActive(
+                    "/analytics"
+                  )
+                    ? 900
+                    : 600,
+              }}
+            >
+              ANALYTICS
+            </Button>
+
+
+            {/* HISTORY */}
 
             <Button
               component={Link}
@@ -407,7 +410,7 @@ function Navbar() {
 
 
         {/* =================================================
-            IMPORTANT: LOGOUT
+            LOGOUT
         ================================================= */}
 
         <MenuItem
